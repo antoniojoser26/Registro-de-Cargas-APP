@@ -766,9 +766,9 @@ function viewNut() {
       <ol class="small" style="margin:10px 0;padding-left:20px;line-height:1.7"><li>En Samsung Health: menú ⋮ → <b>Ajustes</b> → <b>Descargar datos personales</b> → Descargar.</li><li>Se guarda en <b>Mis archivos → Descargas → Samsung Health</b>. Comprime esa carpeta en ZIP (mantén pulsada la carpeta → ⋮ → Comprimir), o usa solo los CSV <span class="num">step_daily_trend</span> y <span class="num">health.nutrition</span>.</li></ol>
       ${S.mcp && S.profile?.drive?.imports?.id ? `<div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:10px">
         <div><b>Desde Google Drive</b> <span class="pill good">Recomendado en el móvil</span></div>
-        <p class="small">Comparte el ZIP o los CSV con Drive (en Mis archivos: mantén pulsado → Compartir → Drive) y guárdalos en la carpeta <b>${esc(S.profile.drive.imports.name || "Importaciones Samsung Health")}</b>. Después pulsa «Buscar en Drive».</p>
+        <p class="small">El ZIP completo suele pasar de 10 MB, el máximo que se puede descargar desde Drive. Sube solo los dos archivos que usa la app: en <b>Mis archivos → Descargas → Samsung Health</b>, busca <span class="num">step_daily_trend</span> y <span class="num">health.nutrition</span>, mantén pulsado para seleccionar los dos (el que termina en <span class="num">.csv</span>, dentro de la carpeta principal) → <b>Compartir → Drive</b> → carpeta <b>${esc(S.profile.drive.imports.name || "Importaciones Samsung Health")}</b>. Después pulsa «Buscar en Drive».</p>
         <div class="row"><button class="btn primary" data-act="shDriveList" ${S.shDrive === "loading" || S.importing ? "disabled" : ""}>${S.shDrive === "loading" ? "Buscando…" : "Buscar en Drive"}</button>${S.profile.drive.imports.url ? `<a class="btn ghost" style="text-decoration:none;display:inline-flex;align-items:center" href="${esc(S.profile.drive.imports.url)}" target="_blank" rel="noopener">Abrir carpeta ↗</a>` : ""}</div>
-        ${Array.isArray(S.shDrive) ? (S.shDrive.length ? `<div class="stack" style="gap:6px">${S.shDrive.map(f => `<label class="row small" style="gap:8px;align-items:flex-start"><input type="checkbox" data-shpick="${esc(f.id)}" ${S.shPick?.has(f.id) ? "checked" : ""}><span><b>${esc(f.title)}</b><br><span class="muted">${f.date ? new Date(f.date).toLocaleString("es-ES", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : ""}${f.size ? " · " + fmtN(f.size / 1048576, 1) + " MB" : ""}</span></span></label>`).join("")}
+        ${Array.isArray(S.shDrive) ? (S.shDrive.length ? `<div class="stack" style="gap:6px">${S.shDrive.map(f => { const big = f.size > DRIVE_MAX; return `<label class="row small" style="gap:8px;align-items:flex-start"><input type="checkbox" data-shpick="${esc(f.id)}" ${big ? "disabled" : S.shPick?.has(f.id) ? "checked" : ""}><span><b>${esc(f.title)}</b><br><span class="muted">${f.date ? new Date(f.date).toLocaleString("es-ES", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : ""}${f.size ? " · " + fmtN(f.size / 1048576, 1) + " MB" : ""}</span>${big ? `<br><span style="color:var(--plate-red)">Demasiado grande (máx. 10 MB). Sube solo los CSV step_daily_trend y health.nutrition.</span>` : ""}</span></label>`; }).join("")}
           <div class="row"><button class="btn primary" data-act="shDriveImport" ${S.importing ? "disabled" : ""}>Importar seleccionados</button></div></div>` : `<p class="small muted">La carpeta no tiene archivos ZIP ni CSV todavía.</p>`) : ""}
       </div>` : ""}
       <div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px">
@@ -1043,13 +1043,15 @@ async function maybeAutoSync() {
 }
 
 /* Importación desde la carpeta de Drive: evita el selector de archivos del móvil. */
+const DRIVE_MAX = 10 * 1024 * 1024; // límite de descarga de la conexión con Drive
 async function listDriveImports() {
   const f = S.profile?.drive?.imports; if (!S.mcp || !f?.id) return;
   S.shDrive = "loading"; render();
   try {
     const p = (await S.mcp.callTool("Google Drive", "search_files", {query: `parentId = '${f.id}'`, pageSize: 50, excludeContentSnippets: true}, {cache: false})).payload || {};
     S.shDrive = (p.files || []).filter(x => x && x.id && /\.(zip|csv)$/i.test(String(x.title || ""))).map(x => ({id: String(x.id), title: String(x.title), size: +x.fileSize || 0, date: String(x.modifiedTime || x.createdTime || "")})).sort((a, b) => b.date.localeCompare(a.date));
-    S.shPick = new Set(S.shDrive.length ? [S.shDrive[0].id] : []);
+    const okF = S.shDrive.filter(x => !x.size || x.size <= DRIVE_MAX), csvs = okF.filter(x => /\.csv$/i.test(x.title));
+    S.shPick = new Set((csvs.length ? csvs : okF.slice(0, 1)).map(x => x.id));
   } catch (e) { S.shDrive = null; S.importing = driveErr(e); }
   render();
 }
