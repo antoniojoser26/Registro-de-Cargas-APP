@@ -13,25 +13,34 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout: app de una columna, pensada para el móvil en el gimnasio; barra de pestañas fija abajo. Color de acento = disco azul de 20 kg, rojo = disco de 25 kg. */
+/* Layout: app de una columna, pensada para el móvil en el gimnasio; barra de pestañas fija abajo. Colores de los discos olímpicos: azul 20 kg (acento, peso), rojo 25 kg (grasa), verde 10 kg (músculo), amarillo 15 kg (IMC / hidratos). */
 :root{
-  --bg:#F1F3F7; --surface:#FFFFFF; --sunk:#E7EBF1; --ink:#141922; --muted:#5A6475; --line:#D8DEE7;
-  --accent:#1F4FD1; --accent-soft:#E2E9FB; --on-accent:#FFFFFF;
-  --plate-red:#C3352C; --good:#1F7F55; --good-soft:#DDF1E7; --warn:#A76A12; --warn-soft:#F7EBD6; --red-soft:#F8E1DF;
+  --bg:#EEF1F7; --surface:#FFFFFF; --sunk:#E4E9F2; --ink:#10162A; --muted:#55607A; --line:#D3DAE6;
+  --accent:#1D4ED8; --accent-2:#3B6CF6; --accent-soft:#DCE6FF; --on-accent:#FFFFFF;
+  --plate-red:#D2342A; --plate-yellow:#E7A817; --plate-green:#16955A; --plate-blue:#1D4ED8;
+  --good:#16834F; --good-soft:#D6F2E3; --warn:#A8670A; --warn-soft:#FCEBCB; --red-soft:#FBDDDA; --yellow-soft:#FDF0C9;
+  --hero-1:#13234F; --hero-2:#1D4ED8; --on-hero:#FFFFFF; --on-hero-muted:#B9C8F5;
+  --shadow:0 1px 2px rgba(16,22,42,.06),0 6px 18px rgba(16,22,42,.08); --shadow-lg:0 10px 30px rgba(16,22,42,.16);
   --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
   --r:10px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0E1116; --surface:#161A21; --sunk:#1D222B; --ink:#E7EAF0; --muted:#97A1B2; --line:#2A303B;
-  --accent:#7196FF; --accent-soft:#1D2A4D; --on-accent:#0B1020;
-  --plate-red:#F0695E; --good:#4CC38A; --good-soft:#15342A; --warn:#E2AA4E; --warn-soft:#3A2D16; --red-soft:#3D1F1D;
+  --bg:#0B0E15; --surface:#151A24; --sunk:#1E2532; --ink:#EAEEF6; --muted:#9AA5BA; --line:#283042;
+  --accent:#6E95FF; --accent-2:#8FAEFF; --accent-soft:#1C2A52; --on-accent:#0A1022;
+  --plate-red:#FF6B5F; --plate-yellow:#FFC94A; --plate-green:#3FD18A; --plate-blue:#6E95FF;
+  --good:#3FD18A; --good-soft:#123527; --warn:#FFC24D; --warn-soft:#3B2C10; --red-soft:#42201E; --yellow-soft:#3A3012;
+  --hero-1:#0F1A3D; --hero-2:#25408F; --on-hero:#FFFFFF; --on-hero-muted:#AFC0EE;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35); --shadow-lg:0 10px 30px rgba(0,0,0,.55);
   color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0E1116; --surface:#161A21; --sunk:#1D222B; --ink:#E7EAF0; --muted:#97A1B2; --line:#2A303B;
-  --accent:#7196FF; --accent-soft:#1D2A4D; --on-accent:#0B1020;
-  --plate-red:#F0695E; --good:#4CC38A; --good-soft:#15342A; --warn:#E2AA4E; --warn-soft:#3A2D16; --red-soft:#3D1F1D;
+  --bg:#0B0E15; --surface:#151A24; --sunk:#1E2532; --ink:#EAEEF6; --muted:#9AA5BA; --line:#283042;
+  --accent:#6E95FF; --accent-2:#8FAEFF; --accent-soft:#1C2A52; --on-accent:#0A1022;
+  --plate-red:#FF6B5F; --plate-yellow:#FFC94A; --plate-green:#3FD18A; --plate-blue:#6E95FF;
+  --good:#3FD18A; --good-soft:#123527; --warn:#FFC24D; --warn-soft:#3B2C10; --red-soft:#42201E; --yellow-soft:#3A3012;
+  --hero-1:#0F1A3D; --hero-2:#25408F; --on-hero:#FFFFFF; --on-hero-muted:#AFC0EE;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35); --shadow-lg:0 10px 30px rgba(0,0,0,.55);
   color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -204,6 +213,79 @@ i.sh.N{background:var(--sunk);color:var(--ink)}
 .nutbar i{display:block;height:100%;background:var(--accent);border-radius:4px}
 .nutbar i.over{background:var(--warn)}
 @media (prefers-reduced-motion:no-preference){.msg,.ex{animation:in .18s ease-out}@keyframes in{from{transform:translateY(4px)}to{transform:none}}}
+
+/* ---------- capa visual: relieve y color ---------- */
+.top{position:relative;margin-inline:-16px;padding:22px 16px 20px;margin-top:-16px;margin-bottom:20px;background:linear-gradient(135deg,var(--hero-1),var(--hero-2));color:var(--on-hero);border-radius:0 0 22px 22px;box-shadow:var(--shadow-lg);overflow:hidden}
+.top::after{content:"";position:absolute;right:-40px;top:-40px;width:170px;height:170px;border-radius:50%;border:18px solid rgba(255,255,255,.07);box-shadow:0 0 0 22px rgba(255,255,255,.04);pointer-events:none}
+.top > *{position:relative;z-index:1}
+.top h1{color:var(--on-hero);font-size:32px}
+.top .eyebrow{color:var(--on-hero-muted)}
+.top .seg{background:rgba(255,255,255,.14)}
+.top .seg button{color:var(--on-hero-muted)}
+.top .seg button[aria-pressed="true"]{background:#fff;color:#10162A}
+.top .btn{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.28);color:var(--on-hero)}
+.top .btn.danger{background:var(--plate-red);border-color:var(--plate-red);color:#fff}
+h2{display:flex;align-items:center;gap:8px}
+section > h2::before,section > .row > h2::before,.day-h h2::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);flex:0 0 auto}
+.panel,.ex,.kpi,.daypick button,.msg.a,.cday,.ideas{box-shadow:var(--shadow);border-color:transparent}
+.panel,.ex{border-radius:14px}
+.btn{box-shadow:0 1px 2px rgba(16,22,42,.08)}
+.btn.primary{background:linear-gradient(180deg,var(--accent-2),var(--accent));border-color:var(--accent);box-shadow:0 4px 12px rgba(29,78,216,.35)}
+.btn.primary:disabled{box-shadow:none}
+.chip[aria-pressed="true"]{box-shadow:0 3px 10px rgba(29,78,216,.30)}
+.seg{background:var(--sunk)}
+/* registrar */
+.ex-h h3{font-size:16.5px}
+.ex{border-top:4px solid var(--accent)}
+.step{border-color:var(--line);box-shadow:inset 0 1px 2px rgba(16,22,42,.05)}
+.step button{background:var(--accent-soft);color:var(--accent)}
+.step button:active{background:var(--accent);color:var(--on-accent)}
+.sets .n{color:var(--accent)}
+.daypick button[aria-pressed="true"]{background:linear-gradient(135deg,var(--accent-2),var(--accent));color:var(--on-accent);box-shadow:0 6px 16px rgba(29,78,216,.35)}
+.daypick button[aria-pressed="true"] span,.daypick button[aria-pressed="true"] .next{color:var(--on-accent);opacity:.9}
+.ex-tip{background:var(--yellow-soft);border-left:3px solid var(--plate-yellow)}
+.feel .chip[data-v="Fácil"][aria-pressed="true"]{background:var(--plate-green);border-color:var(--plate-green)}
+.feel .chip[data-v="Bien"][aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
+.feel .chip[data-v="Duro"][aria-pressed="true"]{background:var(--plate-yellow);border-color:var(--plate-yellow);color:#10162A}
+.feel .chip[data-v="Al fallo"][aria-pressed="true"]{background:var(--plate-red);border-color:var(--plate-red)}
+.savebar{border:0;box-shadow:var(--shadow-lg)}
+/* pills */
+.pill.up{background:var(--plate-red);color:#fff}
+.pill.good{background:var(--plate-green);color:#fff}
+.pill.warn{background:var(--plate-yellow);color:#10162A}
+/* KPIs con color de disco: 1 azul, 2 rojo, 3 verde, 4 amarillo */
+.kpi{position:relative;border-radius:14px;overflow:hidden;padding-top:14px}
+.kpi::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--kc,var(--accent))}
+.kpis .kpi:nth-child(1),.goals .kpi:nth-child(1){--kc:var(--plate-blue)}
+.kpis .kpi:nth-child(2),.goals .kpi:nth-child(2){--kc:var(--plate-red)}
+.kpis .kpi:nth-child(3),.goals .kpi:nth-child(3){--kc:var(--plate-green)}
+.kpis .kpi:nth-child(4){--kc:var(--plate-yellow)}
+.kpi .v{color:var(--ink)}
+.kpi .nutbar i,.kpi.goal .nutbar i{background:var(--kc,var(--accent))}
+.kpi .nutbar i.over{background:repeating-linear-gradient(45deg,var(--plate-yellow) 0 6px,var(--warn) 6px 12px)}
+.nutbar{height:10px;border-radius:5px}
+/* gráficas */
+.chart .area{fill-opacity:.22}
+/* calendario */
+.cday{border:1px solid transparent}
+.cday.today{box-shadow:0 0 0 2px var(--accent),var(--shadow)}
+.cday.sel{background:var(--accent-soft)}
+i.sh{line-height:16px;padding:0 5px}
+i.sh.M{background:var(--plate-blue);color:#fff}
+i.sh.T{background:var(--plate-yellow);color:#10162A}
+i.sh.N{background:#3B3F5C;color:#fff}
+i.sh.tele{background:var(--plate-green);color:#fff}
+i.sh.weigh{background:var(--plate-red);color:#fff}
+/* chat */
+.msg.u{background:linear-gradient(135deg,var(--accent-2),var(--accent));box-shadow:0 4px 12px rgba(29,78,216,.25)}
+.msg.a{border-left:3px solid var(--plate-green)}
+.composer{background:linear-gradient(to top,var(--bg) 70%,transparent)}
+/* barra inferior */
+nav.tabs{border-top:0;box-shadow:0 -4px 20px rgba(16,22,42,.10)}
+nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+nav.tabs button[aria-current="page"] svg{stroke-width:2.2}
+.empty{background:var(--surface);border:2px dashed var(--line)}
+.banner{border-left:4px solid var(--plate-yellow)}
 </style>
 
 </head>
@@ -424,7 +506,7 @@ function niceTicks(min, max, n = 4) {
   for (let v = lo; v <= hi + step / 2; v += step) t.push(+v.toFixed(4));
   return t;
 }
-function lineChart(pts, {unit = "", dec = 1} = {}) {
+function lineChart(pts, {unit = "", dec = 1, color = "var(--accent)"} = {}) {
   if (pts.length < 1) return `<div class="empty">Sin datos todavía.</div>`;
   const W = 640, H = 230, L = 46, R = 18, T = 14, B = 30;
   const xs = pts.map(p => new Date(p.x + "T00:00").getTime()), ys = pts.map(p => p.y);
@@ -437,10 +519,10 @@ function lineChart(pts, {unit = "", dec = 1} = {}) {
   const nx = Math.min(pts.length, 5), xl = [];
   for (let k = 0; k < nx; k++) { const i = nx === 1 ? 0 : Math.round(k * (pts.length - 1) / (nx - 1)); if (!xl.includes(i)) xl.push(i); }
   const xlab = xl.map((i, k) => `<text x="${X(xs[i])}" y="${H - 8}" text-anchor="${k === 0 && xl.length > 1 ? "start" : k === xl.length - 1 && xl.length > 1 ? "end" : "middle"}">${fmtDate(pts[i].x)}</text>`).join("");
-  const dots = pts.map((p, i) => `<circle cx="${X(xs[i])}" cy="${Y(p.y)}" r="${i === pts.length - 1 ? 5 : 3}" fill="${i === pts.length - 1 ? "var(--accent)" : "var(--surface)"}" stroke="var(--accent)" stroke-width="2"><title>${fmtDate(p.x)}: ${fmtN(p.y, dec)} ${unit}${p.src ? " · " + p.src : ""}</title></circle>`).join("");
+  const dots = pts.map((p, i) => `<circle cx="${X(xs[i])}" cy="${Y(p.y)}" r="${i === pts.length - 1 ? 5 : 3}" fill="${i === pts.length - 1 ? color : "var(--surface)"}" stroke="${color}" stroke-width="2"><title>${fmtDate(p.x)}: ${fmtN(p.y, dec)} ${unit}${p.src ? " · " + p.src : ""}</title></circle>`).join("");
   const last = pts[pts.length - 1];
   const lx = X(xs[xs.length - 1]), anchor = lx > W - 90 ? "end" : "start";
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución">${grid}<path d="${area}" fill="var(--accent)" fill-opacity=".10"/><path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round"/>${dots}
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución">${grid}<path class="area" d="${area}" fill="${color}" fill-opacity=".18"/><path d="${path}" fill="none" stroke="${color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${dots}
     <text x="${anchor === "end" ? lx - 9 : lx + 9}" y="${Y(last.y) - 9}" text-anchor="${anchor}" style="fill:var(--ink);font-weight:600">${fmtN(last.y, dec)} ${unit}</text>${xlab}</svg>`;
 }
 
@@ -607,7 +689,7 @@ function viewNut() {
   const pts = [...days].reverse().slice(-45).filter(d => d[S.nutMetric] != null).map(d => ({x: d.date, y: d[S.nutMetric]}));
   return `<section><div class="row between" style="margin-bottom:10px"><h2>Nutrición y actividad</h2><span class="small muted">${days[0] ? "Último día: " + fmtDate(days[0].date, {day: "numeric", month: "long"}) + " · " + esc(days[0].source || "") : "Sin datos de Samsung Health"}</span></div>
     ${days.length ? `<div class="eyebrow" style="margin-bottom:6px">Media de los últimos 7 días</div><div class="kpis">${bar("Calorías", "kcal", "kcal")}${bar("Proteína", "protein", "g")}${bar("Grasas", "fat", "g")}${bar("Hidratos", "carbs", "g")}</div>
-    <div class="panel" style="margin-top:10px"><div class="row between" style="margin-bottom:8px"><div class="seg" role="group" aria-label="Dato diario">${Object.entries(M).map(([k, [l]]) => `<button data-nut="${k}" aria-pressed="${S.nutMetric === k}">${l}</button>`).join("")}</div><span class="small muted num">Media 7 días: ${avg("steps") == null ? "—" : fmtN(avg("steps"), 0) + " pasos"}</span></div>${lineChart(pts, {unit: M[S.nutMetric][1], dec: 0})}</div>`
+    <div class="panel" style="margin-top:10px"><div class="row between" style="margin-bottom:8px"><div class="seg" role="group" aria-label="Dato diario">${Object.entries(M).map(([k, [l]]) => `<button data-nut="${k}" aria-pressed="${S.nutMetric === k}">${l}</button>`).join("")}</div><span class="small muted num">Media 7 días: ${avg("steps") == null ? "—" : fmtN(avg("steps"), 0) + " pasos"}</span></div>${lineChart(pts, {unit: M[S.nutMetric][1], dec: 0, color: {kcal: "var(--plate-yellow)", protein: "var(--plate-red)", steps: "var(--plate-green)"}[S.nutMetric]})}</div>`
     : `<div class="empty">Importa tu exportación de Samsung Health para ver aquí tus calorías, macros y pasos frente a tus objetivos. El entrenador también los tendrá en cuenta.</div>`}
     <details class="panel" style="margin-top:10px" ${days.length ? "" : "open"}><summary style="cursor:pointer;font-weight:600">Importar desde Samsung Health</summary>
       <ol class="small" style="margin:10px 0;padding-left:20px;line-height:1.7"><li>En Samsung Health: menú ⋮ → <b>Ajustes</b> → <b>Descargar datos personales</b> → Descargar.</li><li>Se guarda en <b>Mis archivos → Descargas → Samsung Health</b>. Comprime esa carpeta en ZIP (o elige solo los CSV <span class="num">step_daily_trend</span> y <span class="num">health.nutrition</span>).</li><li>Elige el ZIP o los CSV aquí. Se importan los últimos 120 días; puedes repetirlo cada semana.</li></ol>
@@ -898,7 +980,7 @@ function viewProg() {
     <div class="panel" style="margin-top:10px"><div class="row between" style="margin-bottom:8px">
       <div class="seg" role="group" aria-label="Métrica">${Object.entries(M).map(([k, [l]]) => `<button data-metric="${k}" aria-pressed="${S.metric === k}">${l}</button>`).join("")}</div>
       <div class="chips">${[["all", "Todas"], ...[...new Set(all.map(b => b.source).filter(Boolean))].map(s => [s, s])].map(([k, l]) => `<button class="chip" data-source="${esc(k)}" aria-pressed="${S.source === k}">${esc(l)}</button>`).join("")}</div></div>
-      ${lineChart(pts, {unit: M[S.metric][1]})}
+      ${lineChart(pts, {unit: M[S.metric][1], color: {weight: "var(--plate-blue)", fat: "var(--plate-red)", muscle: "var(--plate-green)"}[S.metric]})}
       <p class="small muted" style="margin-top:6px">Cada báscula o reloj mide distinto: para comparar tendencias, filtra por una sola fuente.</p></div>
     <details class="panel" style="margin-top:10px"><summary style="cursor:pointer;font-weight:600">Añadir medición</summary>
       <div class="grid2" style="margin-top:10px">
