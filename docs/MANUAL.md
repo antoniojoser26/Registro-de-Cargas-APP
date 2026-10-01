@@ -58,7 +58,7 @@ Formas de añadir un vídeo:
 
 Los vídeos aparecen también en **Hoy**, bajo cada ejercicio, para consultarlos mientras entrenas.
 
-Si el gimnasio y la casa tienen un ejercicio con el mismo nombre, comparten vídeos.
+Los vídeos de **Gimnasio** y de **Casa** van por separado, aunque el ejercicio se llame igual: cambia de apartado arriba a la derecha.
 
 ## 5. Calendario (Agenda)
 

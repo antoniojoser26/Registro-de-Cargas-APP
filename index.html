@@ -518,7 +518,7 @@ function viewLog() {
       <div class="grid2" style="margin-top:10px"><div class="field"><label for="min-${i}">Minutos</label><div class="step"><button data-step="min" data-i="${i}" data-d="-5" aria-label="Menos">−</button><input id="min-${i}" inputmode="numeric" data-min="${i}" value="${e.min ?? ""}"><button data-step="min" data-i="${i}" data-d="5" aria-label="Más">+</button></div></div>
       <div class="field"><label for="det-${i}">Velocidad / inclinación</label><input class="input" id="det-${i}" data-det="${i}" value="${esc(e.detail)}" placeholder="4,5 km/h · 8 %"></div></div>${feel}${note}</div>`;
     const unit = unitOf(px.last);
-    const vids = vidsOf(e.n);
+    const vids = vidsOf(e.n, S.place);
     const vlinks = vids.length ? `<div class="vlinks">${vids.map((v, k) => v.kind === "asset" ? `<button data-vplay="${i}-${k}">▶ ${esc(v.label || "Vídeo")}</button>` : `<a href="${esc(v.url)}" target="_blank" rel="noopener">▶ ${esc(v.label || "Vídeo")} ↗</a>`).join("")}</div>
       ${vids.map((v, k) => v.kind === "asset" ? `<video id="vp-${i}-${k}" hidden controls playsinline preload="none" src="/_blob/${esc(v.asset)}" style="width:100%;max-width:420px;border-radius:8px;background:#000;margin-top:8px"></video>` : "").join("")}` : "";
     const pset = prev ? prev.e.sets || [] : [];
@@ -605,7 +605,18 @@ function lineChart(pts, {unit = "", dec = 1, color = "var(--accent)"} = {}) {
 
 /* ---------- vista: vídeos ---------- */
 const slug = n => String(n).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 120) || "ejercicio";
-const vidsOf = n => S.videos[slug(n)]?.items || [];
+/* Los vídeos van por lugar: los del gimnasio y los de casa no se mezclan aunque el ejercicio se llame igual. */
+const vkey = (place, n) => `${place === "home" ? "home" : "gym"}--${slug(n)}`;
+const vidsOf = (n, place) => S.videos[vkey(place || S.vPlace, n)]?.items || [];
+/* Datos antiguos (sin lugar): se pasan una vez a Gimnasio. */
+let vMigrating = false;
+async function migrateLegacyVideos() {
+  if (vMigrating || !S.db) return; const legacy = Object.keys(S.videos).filter(k => !/^(gym|home)--/.test(k)); if (!legacy.length) return;
+  vMigrating = true;
+  try { for (const k of legacy) { const target = "gym--" + k, cur = S.videos[target]; const items = [...(cur?.items || []), ...(S.videos[k].items || [])];
+      await S.db.doc("videos/" + target).set({n: S.videos[k].n || cur?.n || k, items}); await S.db.doc("videos/" + k).delete(); } } catch {}
+  vMigrating = false;
+}
 function videoItem(v, key, editable = true) {
   const kindLbl = {drive: "Google Drive", link: v.url && /photos\.(app\.goo\.gl|google)/.test(v.url) ? "Google Fotos" : "Enlace", asset: "Subido a la app"}[v.kind] || "Vídeo";
   const media = v.kind === "asset"
@@ -627,10 +638,10 @@ function viewVid() {
       ${S.mcp ? `<button class="btn primary" data-act="loadDrive" ${S.driveState === "loading" || !folder?.id ? "disabled" : ""}>${S.driveFiles ? "Actualizar lista" : "Buscar vídeos en la carpeta"}</button>` : `<span class="small muted">La búsqueda en Drive solo funciona al abrir la app dentro de Claude.</span>`}${dState}</div></div>`;
   if (!HOSTED || (!S.mcp && !folder)) drivePanel = `<p class="small muted" style="margin-bottom:12px">Añade a cada ejercicio el enlace compartido de tu vídeo (Google Fotos, Drive, YouTube…).</p>`;
   if (!p) return head + drivePanel + `<div class="empty">Tus ejercicios aparecerán aquí en cuanto se cargue la rutina.</div>`;
-  const total = p.days.reduce((a, d) => a + d.ex.filter(x => !isCardio(x.n) && vidsOf(x.n).length).length, 0);
+  const total = p.days.reduce((a, d) => a + d.ex.filter(x => !isCardio(x.n) && vidsOf(x.n, S.vPlace).length).length, 0);
   const all = p.days.reduce((a, d) => a + d.ex.filter(x => !isCardio(x.n)).length, 0);
   const days = p.days.map(d => `<div class="day"><div class="day-h"><h2>${esc(d.name)}</h2></div>${d.ex.filter(x => !isCardio(x.n)).map(x => {
-    const key = slug(x.n), vids = vidsOf(x.n), open = S.vAdd === key;
+    const key = vkey(S.vPlace, x.n), vids = vidsOf(x.n, S.vPlace), open = S.vAdd === key;
     const used = new Set(Object.values(S.videos).flatMap(v => (v.items || []).filter(i => i.kind === "drive").map(i => i.fileId)));
     const adder = !open ? `<button class="addset" data-vadd="${key}">+ Añadir vídeo</button>` : `<div class="vadd stack">
       <div class="seg" role="group" aria-label="Origen del vídeo">${[S.mcp && ["drive", "Desde Drive"], ["link", "Pegar enlace"], S.assets && ["file", "Subir archivo"]].filter(Boolean).map(([k, l]) => `<button data-vmode="${k}" aria-pressed="${S.vMode === k}">${l}</button>`).join("")}</div>
@@ -641,7 +652,7 @@ function viewVid() {
       <div class="row"><button class="btn primary" data-vsave="${key}" data-vname="${esc(x.n)}" ${S.uploading ? "disabled" : ""}>${S.uploading ? "Subiendo…" : "Guardar vídeo"}</button><button class="btn ghost" data-act="vcancel">Cancelar</button></div></div>`;
     return `<div class="vex"><div class="row between"><div style="min-width:0"><div class="nm" style="font-weight:600">${esc(x.n)}</div>${x.tip ? `<div class="small muted">Técnica: ${esc(x.tip)}</div>` : ""}</div>${vids.length ? `<span class="pill good">${vids.length} vídeo${vids.length > 1 ? "s" : ""}</span>` : `<span class="pill keep">Sin vídeo</span>`}</div>
       ${vids.map(v => videoItem(v, key)).join("")}${adder}</div>`; }).join("")}</div>`).join("");
-  return head + drivePanel + `<p class="small muted" style="margin-bottom:4px">${total} de ${all} ejercicios con vídeo. Los vídeos de un ejercicio se comparten entre la rutina de gimnasio y la de casa si tienen el mismo nombre.</p>${days}`;
+  return head + drivePanel + `<p class="small muted" style="margin-bottom:4px">${total} de ${all} ejercicios de ${S.vPlace === "home" ? "casa" : "gimnasio"} con vídeo. Los vídeos de gimnasio y de casa van por separado.</p>${days}`;
 }
 async function loadDrive() {
   const folder = S.profile?.videoFolder; if (!S.mcp || !folder?.id) return;
@@ -1723,7 +1734,7 @@ if (!HOSTED && "serviceWorker" in navigator && location.protocol === "https:") a
   if (sample) sample.limits().then(l => { S.imgCaps = l?.images || null; if (S.tab === "coach") render(); }).catch(() => {}); S.dbState = db ? "on" : "off"; if (!mcp) S.vMode = "link";
   if (!db) { render(); return; }
   const err = () => {};
-  db.collection("videos").onSnapshot(s => { S.videos = {}; s.docs.forEach(d => S.videos[d.id] = d.data()); soon(); }, err);
+  db.collection("videos").onSnapshot(s => { S.videos = {}; s.docs.forEach(d => S.videos[d.id] = d.data()); soon(); migrateLegacyVideos(); }, err);
   db.doc("calendar/main").onSnapshot(s => { S.cal = s.exists ? s.data() : null; S.calLoaded = true; autoPlace(); soon(); maybeAutoSync(); }, err);
   db.doc("calendar/gcal").onSnapshot(s => { S.gcalMap = s.exists ? (s.data().days || {}) : {}; soon(); }, err);
   db.doc("calendar/overrides").onSnapshot(s => { S.calOv = s.exists ? (s.data().days || {}) : {}; autoPlace(); soon(); }, err);

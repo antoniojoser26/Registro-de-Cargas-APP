@@ -30,7 +30,7 @@ Los datos son documentos JSON organizados por colecciones:
 | `logs/<id>` | Una sesión: `date`, `place` (`gym`/`home`), `day`, `energy` (1-5), `note`, `createdAt`, `entries[]` |
 | `body/<id>` | Una medición: `date`, `weight`, `fat`, `muscle`, `source`, `note` |
 | `daily/<AAAA-MM-DD>` | Un día de nutrición y actividad: `steps`, `kcal`, `protein`, `fat`, `carbs`, `source` |
-| `videos/<nombre-normalizado>` | Vídeos de un ejercicio: `n`, `items[]` → `{id, kind, label, url, fileId, asset, title, addedAt}` |
+| `videos/<lugar>--<nombre-normalizado>` | Vídeos de un ejercicio en un lugar (`gym` o `home`): `n`, `items[]` → `{id, kind, label, url, fileId, asset, title, addedAt}` |
 | `chat/main` | Últimos 40 mensajes del entrenador |
 | `calendar/main` | Última sincronización con Google Calendar: `syncedAt`, `calendars[]`, `calNames`, `from`, `to`, `days` → `{AAAA-MM-DD: {shift: "M"/"T"/"N"/null, code: "M1"…/null, tele, off, weigh, titles[]}}` |
 | `calendar/gcal` | Eventos creados por la app en Google Calendar: `days` → `{AAAA-MM-DD: idDelEvento}`. Solo esos se borran o sustituyen al cambiar un ajuste. |
