@@ -630,7 +630,7 @@ function viewVid() {
       <div class="seg" role="group" aria-label="Origen del vídeo">${[S.mcp && ["drive", "Desde Drive"], ["link", "Pegar enlace"], S.assets && ["file", "Subir archivo"]].filter(Boolean).map(([k, l]) => `<button data-vmode="${k}" aria-pressed="${S.vMode === k}">${l}</button>`).join("")}</div>
       ${S.vMode === "drive" ? (S.driveFiles ? (S.driveFiles.length ? `<div class="field"><label for="v-file">Vídeo de la carpeta</label><select class="input" id="v-file">${S.driveFiles.map(f => `<option value="${esc(f.id)}">${esc(f.title)}${used.has(f.id) ? " (ya asignado)" : ""}</option>`).join("")}</select></div>` : `<p class="small muted">La carpeta está vacía. Sube vídeos y pulsa «Actualizar lista».</p>`) : `<p class="small muted">Pulsa «Buscar vídeos en la carpeta» arriba para ver tus vídeos de Drive.</p>`)
         : S.vMode === "link" ? `<div class="field"><label for="v-url">Enlace compartido de Google Fotos, Drive o YouTube</label><input class="input" id="v-url" inputmode="url" placeholder="https://photos.app.goo.gl/…"></div>`
-        : `<div class="field"><label for="v-up">Archivo de vídeo (MP4 o WebM, máx. 20 MB)</label><input type="file" class="input" id="v-up" accept="video/mp4,video/webm"></div><p class="small muted">Se reproduce dentro de la app. Para vídeos más largos, usa Drive.</p>`}
+        : `<div class="field"><label for="v-up">Archivo de vídeo (MP4 o WebM, máx. 20 MB)</label><input type="file" class="input" id="v-up" accept="video/*"></div><p class="small muted">Se reproduce dentro de la app. Para vídeos más largos, usa Drive.</p>`}
       <div class="grid2"><div class="field"><label for="v-lbl">Tipo</label><select class="input" id="v-lbl"><option>Mi técnica</option><option>Referencia del entrenador</option><option>Corrección</option></select></div></div>
       <div class="row"><button class="btn primary" data-vsave="${key}" data-vname="${esc(x.n)}" ${S.uploading ? "disabled" : ""}>${S.uploading ? "Subiendo…" : "Guardar vídeo"}</button><button class="btn ghost" data-act="vcancel">Cancelar</button></div></div>`;
     return `<div class="vex"><div class="row between"><div style="min-width:0"><div class="nm" style="font-weight:600">${esc(x.n)}</div>${x.tip ? `<div class="small muted">Técnica: ${esc(x.tip)}</div>` : ""}</div>${vids.length ? `<span class="pill good">${vids.length} vídeo${vids.length > 1 ? "s" : ""}</span>` : `<span class="pill keep">Sin vídeo</span>`}</div>
@@ -763,9 +763,19 @@ function viewNut() {
     <div class="panel" style="margin-top:10px"><div class="row between" style="margin-bottom:8px"><div class="seg" role="group" aria-label="Dato diario">${Object.entries(M).map(([k, [l]]) => `<button data-nut="${k}" aria-pressed="${S.nutMetric === k}">${l}</button>`).join("")}</div><span class="small muted num">Media 7 días: ${avg("steps") == null ? "—" : fmtN(avg("steps"), 0) + " pasos"}</span></div>${lineChart(pts, {unit: M[S.nutMetric][1], dec: 0, color: {kcal: "var(--plate-yellow)", protein: "var(--plate-red)", steps: "var(--plate-green)"}[S.nutMetric]})}</div>`
     : `<div class="empty">Importa tu exportación de Samsung Health para ver aquí tus calorías, macros y pasos frente a tus objetivos. El entrenador también los tendrá en cuenta.</div>`}
     <details class="panel" style="margin-top:10px" ${days.length ? "" : "open"}><summary style="cursor:pointer;font-weight:600">Importar desde Samsung Health</summary>
-      <ol class="small" style="margin:10px 0;padding-left:20px;line-height:1.7"><li>En Samsung Health: menú ⋮ → <b>Ajustes</b> → <b>Descargar datos personales</b> → Descargar.</li><li>Se guarda en <b>Mis archivos → Descargas → Samsung Health</b>. Comprime esa carpeta en ZIP (o elige solo los CSV <span class="num">step_daily_trend</span> y <span class="num">health.nutrition</span>).</li><li>Elige el ZIP o los CSV aquí. Se importan los últimos 120 días; puedes repetirlo cada semana.</li></ol>
-      <div class="row"><input type="file" class="input" id="shfile" accept=".zip,.csv,application/zip,text/csv" multiple style="flex:1;min-width:220px"><button class="btn primary" data-act="importSH" ${S.dbState !== "on" || S.importing ? "disabled" : ""}>Importar</button></div>
-      <p class="small muted" id="impState" style="margin-top:6px">${esc(S.importing)}</p></details>
+      <ol class="small" style="margin:10px 0;padding-left:20px;line-height:1.7"><li>En Samsung Health: menú ⋮ → <b>Ajustes</b> → <b>Descargar datos personales</b> → Descargar.</li><li>Se guarda en <b>Mis archivos → Descargas → Samsung Health</b>. Comprime esa carpeta en ZIP (mantén pulsada la carpeta → ⋮ → Comprimir), o usa solo los CSV <span class="num">step_daily_trend</span> y <span class="num">health.nutrition</span>.</li></ol>
+      ${S.mcp && S.profile?.drive?.imports?.id ? `<div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:10px">
+        <div><b>Desde Google Drive</b> <span class="pill good">Recomendado en el móvil</span></div>
+        <p class="small">Comparte el ZIP o los CSV con Drive (en Mis archivos: mantén pulsado → Compartir → Drive) y guárdalos en la carpeta <b>${esc(S.profile.drive.imports.name || "Importaciones Samsung Health")}</b>. Después pulsa «Buscar en Drive».</p>
+        <div class="row"><button class="btn primary" data-act="shDriveList" ${S.shDrive === "loading" || S.importing ? "disabled" : ""}>${S.shDrive === "loading" ? "Buscando…" : "Buscar en Drive"}</button>${S.profile.drive.imports.url ? `<a class="btn ghost" style="text-decoration:none;display:inline-flex;align-items:center" href="${esc(S.profile.drive.imports.url)}" target="_blank" rel="noopener">Abrir carpeta ↗</a>` : ""}</div>
+        ${Array.isArray(S.shDrive) ? (S.shDrive.length ? `<div class="stack" style="gap:6px">${S.shDrive.map(f => `<label class="row small" style="gap:8px;align-items:flex-start"><input type="checkbox" data-shpick="${esc(f.id)}" ${S.shPick?.has(f.id) ? "checked" : ""}><span><b>${esc(f.title)}</b><br><span class="muted">${f.date ? new Date(f.date).toLocaleString("es-ES", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : ""}${f.size ? " · " + fmtN(f.size / 1048576, 1) + " MB" : ""}</span></span></label>`).join("")}
+          <div class="row"><button class="btn primary" data-act="shDriveImport" ${S.importing ? "disabled" : ""}>Importar seleccionados</button></div></div>` : `<p class="small muted">La carpeta no tiene archivos ZIP ni CSV todavía.</p>`) : ""}
+      </div>` : ""}
+      <div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:10px">
+        <div><b>Desde este dispositivo</b></div>
+        <div class="row"><input type="file" class="input" id="shfile" multiple style="flex:1;min-width:220px"><button class="btn" data-act="importSH" ${S.dbState !== "on" || S.importing ? "disabled" : ""}>Importar</button></div></div>
+      <p class="small muted">Se importan los últimos 120 días; puedes repetirlo cuando quieras.</p>
+      <p class="small" id="impState" style="margin-top:6px">${esc(S.importing)}</p></details>
     <details class="panel" style="margin-top:10px"><summary style="cursor:pointer;font-weight:600">Apuntar un día a mano</summary>
       <div class="grid2" style="margin-top:10px"><div class="field"><label for="d-date">Fecha</label><input type="date" class="input" id="d-date" value="${todayISO()}"></div>
         <div class="field"><label for="d-steps">Pasos</label><input class="input" id="d-steps" inputmode="numeric"></div>
@@ -1032,6 +1042,41 @@ async function maybeAutoSync() {
   try { const perms = await claude.use("permissions"); const st = perms ? await perms.state("mcp:" + CAL_SERVER) : null; if (st === "granted") syncCalendar(false); } catch {}
 }
 
+/* Importación desde la carpeta de Drive: evita el selector de archivos del móvil. */
+async function listDriveImports() {
+  const f = S.profile?.drive?.imports; if (!S.mcp || !f?.id) return;
+  S.shDrive = "loading"; render();
+  try {
+    const p = (await S.mcp.callTool("Google Drive", "search_files", {query: `parentId = '${f.id}'`, pageSize: 50, excludeContentSnippets: true}, {cache: false})).payload || {};
+    S.shDrive = (p.files || []).filter(x => x && x.id && /\.(zip|csv)$/i.test(String(x.title || ""))).map(x => ({id: String(x.id), title: String(x.title), size: +x.fileSize || 0, date: String(x.modifiedTime || x.createdTime || "")})).sort((a, b) => b.date.localeCompare(a.date));
+    S.shPick = new Set(S.shDrive.length ? [S.shDrive[0].id] : []);
+  } catch (e) { S.shDrive = null; S.importing = driveErr(e); }
+  render();
+}
+function driveErr(e) {
+  return {server_not_connected: "Google Drive no está conectado. Añádelo en claude.ai → Ajustes → Conectores.", needs_reauth: "Vuelve a conectar Google Drive en claude.ai → Ajustes → Conectores.", not_in_manifest: "No has dado permiso a esta app para leer tu Google Drive.", server_unavailable: "Google Drive no responde ahora. Inténtalo en un momento.", tool_error: "Drive devolvió un error: " + (e?.message || "")}[e?.code] || "No se pudo leer Google Drive. Inténtalo de nuevo.";
+}
+async function importFromDrive() {
+  const ids = [...(S.shPick || [])]; if (!ids.length) { toast("Elige al menos un archivo."); return; }
+  const files = [];
+  try {
+    for (const id of ids) {
+      const meta = (S.shDrive || []).find(x => x.id === id);
+      S.importing = `Descargando ${meta?.title || "archivo"}…`; render();
+      const p = (await S.mcp.callTool("Google Drive", "download_file_content", {fileId: id}, {cache: false})).payload || {};
+      if (!p.content) throw {code: "tool_error", message: "archivo vacío"};
+      const bin = atob(p.content), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      files.push(new File([bytes], String(p.title || meta?.title || "importacion.csv")));
+    }
+    S.importing = "Leyendo archivos…"; render();
+    const r = await importSamsung(files);
+    if (!r.files) { S.importing = "En esos archivos no hay datos de pasos ni de nutrición. Sube el ZIP de la exportación o los CSV step_daily_trend y health.nutrition."; render(); return; }
+    if (!r.list.length) { S.importing = "Los archivos no tienen datos de los últimos 120 días."; render(); return; }
+    const n = await writeDaily(r.list, "Samsung Health"); S.importing = ""; S.shDrive = null; toast(`Importados ${n} días de Samsung Health`);
+  } catch (e) { S.importing = e?.code ? driveErr(e) : "No se pudo importar: revisa que sean los archivos de la exportación."; }
+  render();
+}
+
 /* ---------- vista: progreso ---------- */
 const bmi = w => { const h = (S.profile?.height || 169) / 100; return w / (h * h); };
 function viewProg() {
@@ -1134,7 +1179,7 @@ function viewCoach() {
       ${S.attach.length ? `<div class="thumbs">${S.attach.map((f, i) => `<span class="thumb"><img src="${S.attachUrls[i]}" alt="Imagen adjunta ${i + 1}"><button data-unattach="${i}" aria-label="Quitar imagen">✕</button></span>`).join("")}</div>` : ""}
       <div class="box">
         <button class="iconbtn" data-act="ideas" aria-expanded="${!!S.showIdeas}" aria-label="Ideas para preguntar" title="Ideas para preguntar" ${S.busy ? "disabled" : ""}><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
-        ${imagesOk() ? `<label class="iconbtn" for="coachImg" title="Adjuntar capturas o fotos" aria-label="Adjuntar imágenes"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg></label><input type="file" id="coachImg" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden ${S.busy ? "disabled" : ""}>` : ""}
+        ${imagesOk() ? `<label class="iconbtn" for="coachImg" title="Adjuntar capturas o fotos" aria-label="Adjuntar imágenes"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg></label><input type="file" id="coachImg" accept="image/*" multiple hidden ${S.busy ? "disabled" : ""}>` : ""}
         <textarea class="input" id="ask" placeholder="${S.attach.length ? "¿Qué quieres que mire en las imágenes?" : "Escribe tu pregunta…"}" ${S.busy ? "disabled" : ""}>${esc(S.askDraft || "")}</textarea>
         ${S.busy ? `<button class="btn" data-act="stop">Parar</button>` : `<button class="btn primary" data-act="send">Enviar</button>`}</div></div>`;
 }
@@ -1250,7 +1295,7 @@ function viewSetup() {
 function backupSection() {
   return `<section><h2>Copia de seguridad</h2><div class="panel stack" style="margin-top:10px">
     <p class="small">${HOSTED ? "Importa aquí una copia (.json) exportada desde la versión independiente de la app." : "Exporta todos tus datos a un archivo .json para guardarlos o pasarlos a otro dispositivo, e impórtalos cuando quieras."}</p>
-    <div class="row">${!HOSTED ? `<button class="btn" data-act="exportData">Exportar datos</button>` : ""}<input type="file" class="input" id="bkfile" accept=".json,application/json" style="flex:1;min-width:200px"><button class="btn" data-act="importData">Importar copia</button></div>
+    <div class="row">${!HOSTED ? `<button class="btn" data-act="exportData">Exportar datos</button>` : ""}<input type="file" class="input" id="bkfile" style="flex:1;min-width:200px"><button class="btn" data-act="importData">Importar copia</button></div>
     ${S.confirmImport ? `<div class="banner" style="margin:0">Importar reemplaza el perfil, las rutinas y los registros con el mismo identificador. <button class="btn danger" data-act="importData2">Importar igualmente</button></div>` : ""}</div></section>`;
 }
 function viewMe() {
@@ -1463,12 +1508,14 @@ document.addEventListener("click", async ev => {
   if (ds.delrem != null) { const p = JSON.parse(JSON.stringify(S.profile)); p.reminders.splice(+ds.delrem, 1); await saveProfile(p); toast("Recordatorio completado"); return; }
   if (ds.togglenote != null) { const p = JSON.parse(JSON.stringify(S.profile)); const n = p.notes[+ds.togglenote]; n.status = n.status === "Resuelto" ? "Pendiente" : "Resuelto"; await saveProfile(p); return; }
   const a = ds.act;
+  if (a === "shDriveList") return listDriveImports();
+  if (a === "shDriveImport") return importFromDrive();
   if (a === "importSH") {
     const files = [...($("#shfile")?.files || [])]; if (!files.length) { toast("Elige el ZIP o los CSV de Samsung Health."); return; }
     S.importing = "Leyendo archivos…"; render();
     try {
       const r = await importSamsung(files);
-      if (!r.files) { S.importing = "No encontré archivos de pasos ni de nutrición. Busca los que contienen step_daily_trend o health.nutrition."; render(); return; }
+      if (!r.files) { S.importing = "No encontré archivos de pasos ni de nutrición. Elige el ZIP de la exportación o los CSV que contienen step_daily_trend o health.nutrition."; render(); return; }
       if (!r.list.length) { S.importing = "Los archivos no tienen datos de los últimos 120 días."; render(); return; }
       const n = await writeDaily(r.list, "Samsung Health");
       S.importing = ""; toast(`Importados ${n} días de Samsung Health`);
@@ -1577,7 +1624,7 @@ document.addEventListener("input", ev => {
   else if (t.id === "sdate") { S.draft.date = t.value; saveDraftLocal(); }
   else if (t.id === "ask") { S.askDraft = t.value; t.style.height = "auto"; t.style.height = Math.min(160, t.scrollHeight) + "px"; }
 });
-document.addEventListener("change", ev => { if (ev.target.id === "coachImg") { addAttach([...ev.target.files]); ev.target.value = ""; return; } if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
+document.addEventListener("change", ev => { if (ev.target.dataset?.shpick) { S.shPick = S.shPick || new Set(); ev.target.checked ? S.shPick.add(ev.target.dataset.shpick) : S.shPick.delete(ev.target.dataset.shpick); return; } if (ev.target.id === "coachImg") { addAttach([...ev.target.files]); ev.target.value = ""; return; } if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
 document.addEventListener("paste", ev => { if (ev.target.id !== "ask" || !imagesOk()) return; const imgs = [...(ev.clipboardData?.files || [])].filter(f => f.type.startsWith("image/")); if (imgs.length) { ev.preventDefault(); addAttach(imgs); } });
 document.addEventListener("toggle", ev => { if (ev.target.id === "prevDetails") lsSet("rc.prevOpen", ev.target.open); }, true);
 document.addEventListener("keydown", ev => { if (ev.target.id === "ask" && ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); send(ev.target.value); } });

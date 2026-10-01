@@ -107,6 +107,7 @@ La pestaña **Agenda** muestra cinco semanas (la anterior, la actual y tres más
     1. En Samsung Health: menú ⋮ → **Ajustes** → **Descargar datos personales**.
     2. Comprime la carpeta que se crea en **Mis archivos → Descargas → Samsung Health**.
     3. Elige el ZIP en la app. También puedes elegir solo los CSV `step_daily_trend` y `health.nutrition`.
+    4. **Desde el móvil, dentro de Claude** (recomendado): comparte el ZIP o los CSV con Google Drive y guárdalos en la carpeta de importaciones de la app. Después pulsa **Buscar en Drive**, marca los archivos y pulsa **Importar seleccionados**. Así no dependes del selector de archivos del móvil.
 - **Apuntar un día a mano**: para días sueltos o si usas otra app de nutrición.
 
 ### Cargas por ejercicio
