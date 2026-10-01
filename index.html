@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1F4FD1">
+<meta name="theme-color" content="#DDE8FF">
 <meta name="description" content="Registro de entrenamientos de fuerza, composición corporal, nutrición y entrenador con IA.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -11,7 +11,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>App Registro de Cargas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=Noto+Sans:wght@400;500;600;700&display=swap">
 <style>
 /* Siempre en modo claro, también si el móvil está en modo oscuro.
    Layout: app de una columna, pensada para el móvil en el gimnasio; barra de pestañas fija abajo. Colores de los discos olímpicos: azul 20 kg (acento, peso), rojo 25 kg (grasa), verde 10 kg (músculo), amarillo 15 kg (IMC / hidratos). */
@@ -22,9 +22,9 @@
   --good:#16834F; --good-soft:#D6F2E3; --warn:#A8670A; --warn-soft:#FCEBCB; --red-soft:#FBDDDA; --yellow-soft:#FDF0C9;
   --hero-1:#13234F; --hero-2:#1D4ED8; --on-hero:#FFFFFF; --on-hero-muted:#B9C8F5;
   --shadow:0 1px 2px rgba(16,22,42,.06),0 6px 18px rgba(16,22,42,.08); --shadow-lg:0 10px 30px rgba(16,22,42,.16);
-  --f-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
-  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --f-display:"Rubik","Noto Sans",system-ui,sans-serif;
+  --f-body:"Noto Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"Rubik","Noto Sans",system-ui,sans-serif;
   --r:10px;
   color-scheme:light;
 }
@@ -33,8 +33,8 @@ html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
 .wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:16px 120px}
 h1,h2,h3{font-family:var(--f-display);font-weight:700;letter-spacing:.01em;text-wrap:balance;margin:0;line-height:1.1}
-h1{font-size:30px;text-transform:uppercase}
-h2{font-size:24px;text-transform:uppercase}
+h1{font-size:30px}
+h2{font-size:21px}
 h3{font-size:19px}
 p{margin:0}
 .muted{color:var(--muted)}
@@ -308,6 +308,106 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
 nav.tabs button[aria-current="page"] svg{stroke-width:2.2}
 .empty{background:var(--surface);border:2px dashed var(--line)}
 .banner{border-left:4px solid var(--plate-yellow)}
+
+/* ---------- tema tipo Samsung Health / One UI ----------
+   Fondo gris claro con degradado suave arriba, tarjetas blancas muy redondeadas sin borde,
+   títulos grandes a la izquierda, colores por métrica (actividad verde, composición azul,
+   nutrición naranja, IMC morado) y botón «+» de añadir rápido. */
+:root{
+  --bg:#F3F4F8; --surface:#FFFFFF; --sunk:#EEF0F5; --ink:#141414; --muted:#6B6F7B; --line:#E6E8EE;
+  --accent:#3E7BFA; --accent-2:#5B8FFF; --accent-soft:#E6EEFF; --on-accent:#FFFFFF;
+  --plate-blue:#3E7BFA; --plate-red:#FF7A45; --plate-green:#2DBE7E; --plate-yellow:#F5A623; --plate-purple:#8B6CF6;
+  --good:#1FA567; --good-soft:#E2F6EC; --warn:#C27C0E; --warn-soft:#FFF1D9; --red-soft:#FFE9E0; --yellow-soft:#FFF5DE;
+  --shadow:0 1px 3px rgba(20,20,40,.05); --shadow-lg:0 8px 24px rgba(20,20,40,.10); --r:22px;
+}
+body{background:linear-gradient(180deg,#DDE8FF 0,#EEF1FB 220px,var(--bg) 420px) no-repeat,var(--bg)}
+.wrap{padding-block:8px 140px}
+/* cabecera: título grande a la izquierda, sin bloque de color */
+.top{background:none;box-shadow:none;color:var(--ink);margin:0 0 14px;padding:34px 2px 6px;border-radius:0;overflow:visible}
+.top::after{display:none}
+.top h1{color:var(--ink);font-size:30px;font-weight:700;letter-spacing:-.01em}
+.top .eyebrow{color:var(--muted);text-transform:none;letter-spacing:0;font-size:14px;font-weight:500}
+.top .seg{background:#E4E7EF}
+.top .seg button{color:var(--muted)}
+.top .seg button[aria-pressed="true"]{background:#fff;color:var(--ink)}
+.top .btn{background:#fff;border-color:transparent;color:var(--ink)}
+.eyebrow{text-transform:none;letter-spacing:0;font-size:13px}
+h2{font-family:var(--f-display);font-weight:600}
+section > h2::before,section > .row > h2::before,.day-h h2::before{display:none}
+/* tarjetas */
+.panel,.ex,.kpi,.prevcard,.msg.a,.ideas,.daypick button,.cday,.empty{border:0;border-radius:var(--r);box-shadow:var(--shadow)}
+.ex{border-top:0;padding:16px}
+.prevcard{border-left:0}
+.kpi{padding:14px 16px}
+.kpi::before{display:none}
+.kpi .eyebrow{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.kpi .eyebrow::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--kc,var(--accent))}
+.kpi .v{font-size:30px}
+.kpis .kpi:nth-child(1),.goals .kpi:nth-child(1){--kc:var(--plate-blue)}
+.kpis .kpi:nth-child(2),.goals .kpi:nth-child(2){--kc:var(--plate-red)}
+.kpis .kpi:nth-child(3),.goals .kpi:nth-child(3){--kc:var(--plate-green)}
+.kpis .kpi:nth-child(4){--kc:var(--plate-purple)}
+.nutbar{height:8px;border-radius:4px;background:var(--sunk)}
+.empty{background:var(--surface)}
+/* botones y controles */
+.btn{border-radius:999px;border:0;background:#fff;box-shadow:var(--shadow);font-weight:600}
+.btn.primary{background:var(--accent);box-shadow:none}
+.btn.ghost{background:transparent;box-shadow:none}
+.chip{border:0;background:#fff;box-shadow:var(--shadow)}
+.chip[aria-pressed="true"]{box-shadow:none}
+.input,select.input,textarea.input{border:0;background:var(--sunk);border-radius:14px}
+.step{border:0;background:var(--sunk);border-radius:14px;box-shadow:none}
+.step button{background:transparent;color:var(--accent);font-size:20px}
+.step input{background:transparent}
+.seg{border-radius:999px;padding:3px}
+.seg button{border-radius:999px}
+.daypick button{min-width:116px;padding:10px 14px}
+.daypick button[aria-pressed="true"]{background:var(--accent);box-shadow:0 6px 16px rgba(62,123,250,.30)}
+.daypick button.done{background:var(--good-soft);box-shadow:inset 0 0 0 2px var(--plate-green)}
+.daypick b{font-family:var(--f-display);text-transform:none;font-size:16px}
+.prv{border-radius:12px}
+.pill{border-radius:999px}
+.ex-tip{border-left:0;border-radius:12px}
+/* agenda */
+.cday{min-height:64px;border-radius:14px}
+.monthnav .mname{text-transform:none;font-size:20px}
+/* chat */
+.msg.u{background:var(--accent);box-shadow:none;border-radius:20px 20px 6px 20px}
+.msg.a{border-left:0;border-radius:20px 20px 20px 6px}
+/* barra inferior tipo One UI */
+nav.tabs{background:rgba(255,255,255,.96);backdrop-filter:blur(10px);box-shadow:0 -1px 0 var(--line)}
+nav.tabs button{color:#8A8E99;font-weight:500}
+nav.tabs button[aria-current="page"]{background:none;color:var(--ink);font-weight:700}
+nav.tabs button[aria-current="page"] svg{stroke:var(--accent);stroke-width:2.2}
+/* botón «+» y hoja de añadir rápido */
+.fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:32px;line-height:58px;box-shadow:0 8px 22px rgba(62,123,250,.45);z-index:6;cursor:pointer}
+.sheet-bg{position:fixed;inset:0;background:rgba(10,12,20,.35);z-index:7}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:8;background:#fff;border-radius:26px 26px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 30px rgba(0,0,0,.15);max-width:760px;margin:0 auto}
+.sheet .grab{width:40px;height:5px;border-radius:3px;background:#D5D8E0;margin:4px auto 12px}
+.sheet h3{font-family:var(--f-display);font-size:18px;margin:0 0 10px 4px}
+.qa{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.qa button{border:0;background:var(--sunk);border-radius:18px;padding:14px;text-align:left;display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14.5px;color:var(--ink);cursor:pointer}
+.qa .ic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff}
+.qa .ic svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* resumen semanal con anillo */
+.weekcard{display:flex;gap:16px;align-items:center;background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}
+.weekcard .ring{flex:0 0 auto}
+.weekcard .wt{font-family:var(--f-display);font-size:26px;font-weight:700;line-height:1}
+.weekcard .wt small{font-size:15px;color:var(--muted);font-weight:600}
+.wdots{display:flex;gap:6px;margin-top:8px}
+.wdots span{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:11.5px;font-weight:700;background:var(--sunk);color:var(--muted)}
+.wdots span.on{background:var(--plate-green);color:#fff}
+.wdots span.today{box-shadow:0 0 0 2px var(--accent)}
+.wmeta{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:13px;color:var(--muted)}
+.wmeta b{color:var(--ink)}
+
+/* One UI: sin mayúsculas forzadas en títulos */
+.daypick b,.prevcard .pt{text-transform:none;letter-spacing:0}
+.monthnav .mname{text-transform:capitalize}
+.iconbtn{border:0;background:var(--surface);box-shadow:var(--shadow);border-radius:999px}
+.extable{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);border-collapse:separate;overflow:hidden;border-spacing:0}
+.extable td{padding-left:16px;padding-right:16px}
+.day-h h2{flex:1;min-width:0}
 </style>
 
 </head>
@@ -317,6 +417,7 @@ nav.tabs button[aria-current="page"] svg{stroke-width:2.2}
   <div class="empty">Cargando tu rutina, tus mediciones y tu historial…</div>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div id="fabwrap"></div>
 <nav class="tabs" aria-label="Secciones"><div class="in" id="tabs"></div></nav>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -467,11 +568,24 @@ function ensureDraft() {
 const saveDraftLocal = () => lsSet("rc.draft", S.draft);
 
 /* ---------- render: pestañas ---------- */
+const QA = [
+  ["qaSession", "Registrar sesión", "var(--plate-green)", '<path d="M4 12h3M17 12h3M7 8v8M17 8v8M9.5 10v4M14.5 10v4M9.5 12h5"/>'],
+  ["qaBody", "Añadir medición", "var(--plate-blue)", '<path d="M5 20h14l-2-12H7z"/><path d="M12 8V4"/>'],
+  ["qaFood", "Apuntar comida y pasos", "var(--plate-red)", '<path d="M7 3v8a3 3 0 0 0 6 0V3M10 3v18M17 3c-2 2-2 6 0 8v10"/>'],
+  ["qaCoach", "Preguntar al entrenador", "var(--plate-purple)", '<path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v9"/>'],
+  ["qaPhoto", "Enviar captura al entrenador", "var(--plate-yellow)", '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/>'],
+  ["qaDay", "Marcar turno o vacaciones", "#5BC0DE", '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>']
+];
+function renderFab() {
+  const w = document.getElementById("fabwrap"); if (!w) return;
+  w.innerHTML = (S.tab === "coach" ? "" : `<button class="fab" data-act="qaOpen" aria-label="Añadir rápido">+</button>`) +
+    (S.qaOpen ? `<div class="sheet-bg" data-act="qaClose"></div><div class="sheet" role="dialog" aria-label="Añadir rápido"><div class="grab"></div><h3>Añadir</h3><div class="qa">${QA.map(([k, l, c, ic]) => `<button data-act="${k}"><span class="ic" style="background:${c}"><svg viewBox="0 0 24 24">${ic}</svg></span>${l}</button>`).join("")}</div></div>` : "");
+}
 function renderTabs() {
   $("#tabs").innerHTML = TABS.map(([k, l, ic]) => `<button data-tab="${k}" ${S.tab === k ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("");
 }
 function render() {
-  renderTabs();
+  renderTabs(); renderFab();
   const banner = S.dbState === "off" ? `<div class="banner">Abre esta app dentro de Claude para guardar y ver tus datos. Ahora mismo no se pueden leer ni guardar.</div>` : "";
   const v = {log: viewLog, plan: viewPlan, vid: viewVid, cal: viewCal, prog: viewProg, coach: viewCoach, me: viewMe}[S.tab]();
   $("#app").innerHTML = banner + v;
@@ -491,6 +605,16 @@ function weekDone() {
   }
   return out;
 }
+function weekCard() {
+  const t = todayISO(), mon = isoAdd(t, -((wdOf(t) + 6) % 7)), done = weekDone();
+  const nDays = Math.min(5, (S.plans[S.place]?.days || []).length || 5), n = Math.min(done.size, nDays), pct = nDays ? n / nDays : 0;
+  const R = 30, C = 2 * Math.PI * R;
+  const ring = `<svg class="ring" width="76" height="76" viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="${R}" fill="none" stroke="var(--sunk)" stroke-width="9"/><circle cx="38" cy="38" r="${R}" fill="none" stroke="var(--plate-green)" stroke-width="9" stroke-linecap="round" stroke-dasharray="${(C * pct).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 38 38)"/></svg>`;
+  const dots = ["L", "M", "X", "J", "V"].map((l, i) => `<span class="${done.has(i) ? "on" : ""}${isoAdd(mon, i) === t ? " today" : ""}">${l}</span>`).join("");
+  const last = [...S.body].sort((a, b) => b.date.localeCompare(a.date))[0], nw = typeof nextWeigh === "function" ? nextWeigh() : null;
+  const meta = [last ? `Peso <b>${fmtN(last.weight)} kg</b>` : "", nw ? `Pesaje en <b>${Math.round((new Date(nw) - new Date(t)) / 864e5)} días</b>` : ""].filter(Boolean).map(x => `<span>${x}</span>`).join("");
+  return `<div class="weekcard">${ring}<div style="min-width:0"><div class="eyebrow">Entrenamientos esta semana</div><div class="wt">${n}<small> / ${nDays}</small></div><div class="wdots">${dots}</div>${meta ? `<div class="wmeta">${meta}</div>` : ""}</div></div>`;
+}
 function viewLog() {
   const plan = S.plans[S.place];
   const head = `<div class="top"><div><div class="eyebrow">${fmtDate(S.date, {weekday: "long", day: "numeric", month: "long"})}</div><h1>Registrar sesión</h1></div>
@@ -502,7 +626,7 @@ function viewLog() {
   const next = weekdayIdx(S.place, S.date);
   const rest = next == null ? `<p class="small muted">Hoy es fin de semana: no toca ningún día del plan. Si entrenas igualmente, elige el día abajo.</p>` : "";
   const doneWeek = weekDone();
-  const days = workNote + rest + `<div class="daypick" role="group" aria-label="Día">${plan.days.map((d, i) => {
+  const days = weekCard() + workNote + rest + `<div class="daypick" role="group" aria-label="Día">${plan.days.map((d, i) => {
     const [a, b] = d.name.split(":"), done = doneWeek.has(i);
     return `<button data-day="${i}" aria-pressed="${i === S.dayIdx}" class="${done ? "done" : ""}"><span>${done ? "✓ " : ""}${esc(a.trim())}${done ? " · hecho" : i === next ? ' · <span class="next">toca hoy</span>' : ""}</span><b>${esc((b || a).trim())}</b></button>`; }).join("")}</div>`;
   const d = S.draft;
@@ -1661,6 +1785,18 @@ document.addEventListener("click", async ev => {
     const k = $("#cal-ov").value, mon = isoAdd(S.calSel, -((wdOf(S.calSel) + 6) % 7)), upd = {};
     for (let i = 0; i < 5; i++) upd[isoAdd(mon, i)] = ovValue(k);
     await saveOverrides(upd); return;
+  }
+  if (a === "qaOpen") { S.qaOpen = true; renderFab(); return; }
+  if (a === "qaClose") { S.qaOpen = false; renderFab(); return; }
+  if (a && a.startsWith("qa")) {
+    S.qaOpen = false;
+    const go = (tab, after) => { S.tab = tab; lsSet("rc.tab", tab); render(); scrollTo(0, 0); if (after) setTimeout(after, 60); };
+    if (a === "qaSession") return go("log");
+    if (a === "qaBody") return go("prog", () => { const d = [...document.querySelectorAll("details.panel")].find(x => /Añadir medición/.test(x.querySelector("summary")?.textContent || "")); if (d) { d.open = true; d.scrollIntoView({block: "center"}); $("#b-w")?.focus(); } });
+    if (a === "qaFood") return go("prog", () => { const d = [...document.querySelectorAll("details.panel")].find(x => /Apuntar un día a mano/.test(x.querySelector("summary")?.textContent || "")); if (d) { d.open = true; d.scrollIntoView({block: "center"}); } });
+    if (a === "qaCoach") return go("coach", () => $("#ask")?.focus());
+    if (a === "qaPhoto") return go("coach", () => $("#coachImg")?.click());
+    if (a === "qaDay") return go("cal", () => { const d = $("#rangeBox"); if (d) { d.open = true; d.scrollIntoView({block: "center"}); } });
   }
   if (a === "exportDrive") return exportToDrive();
   if (a === "exportZip") return exportZip();
