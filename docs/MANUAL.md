@@ -126,6 +126,8 @@ Muestra el historial completo. Toca una sesión para ver el detalle o borrarla.
     - **Notas generales del Perfil**: siempre, hasta que las quites. Es el sitio para lo que debe tener en cuenta a largo plazo (una lesión, una época de mucho trabajo).
     - **Sensaciones y energía de cada sesión**: mientras esa sesión esté entre las 15 últimas.
     - **Lo que le dices en el chat**: solo mientras siga entre los últimos 20 mensajes, y se borra con **Nueva conversación**.
+- El botón de la **bombilla** abre una lista de preguntas sugeridas; al tocar una, se envía.
+- El botón de la **imagen** adjunta capturas o fotos (por ejemplo, el registro de agua o de comidas de Samsung Health, o una foto de tu plato). El entrenador lee los datos que aparezcan y los valora frente a tus objetivos; en fotos de comida, estima raciones y macros. También puedes pegar una captura directamente en el cuadro de texto. Las imágenes no se guardan: solo queda la nota de que adjuntaste una.
 - **Parar** corta una respuesta larga.
 - **Nueva conversación** borra el historial del chat. Tus datos no se tocan.
 - No sustituye a un profesional sanitario. Ante dolor o síntomas, para y consulta.

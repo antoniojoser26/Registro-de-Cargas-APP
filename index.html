@@ -150,7 +150,19 @@ details.sess summary::-webkit-details-marker{display:none}
 .msg.a .h{font-weight:600;margin-top:8px}
 .msg.think{color:var(--muted);font-style:italic}
 .composer{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--bg);padding-top:10px;display:flex;flex-direction:column;gap:8px}
-.composer .box{display:flex;gap:8px;align-items:flex-end}
+.composer .box{display:flex;gap:6px;align-items:flex-end}
+.iconbtn{flex:0 0 auto;width:44px;height:46px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;color:var(--muted)}
+.iconbtn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.iconbtn[aria-expanded="true"]{color:var(--accent);border-color:var(--accent)}
+.ideas{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);max-height:38vh;overflow:auto;box-shadow:0 6px 20px rgba(0,0,0,.10)}
+.ideas button{border:0;border-top:1px solid var(--line);background:none;text-align:left;padding:11px 14px;font-size:14px}
+.ideas button:first-child{border-top:0}
+.ideas button:hover{background:var(--sunk)}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap}
+.thumb{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb button{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:12px;line-height:22px;padding:0}
+.imgnote{font-size:12px;opacity:.85;margin-top:4px}
 .composer textarea{flex:1;min-height:46px;max-height:160px}
 
 /* nav */
@@ -249,7 +261,7 @@ const S = {
   busy: false, ctl: null, confirmClear: false, confirmDel: null,
   mcp: null, assets: null, videos: {}, vPlace: "gym", vAdd: null, vMode: "drive", driveFiles: null, driveState: "idle", driveErr: "", uploading: false,
   daily: [], nutMetric: "kcal", importing: "",
-  editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, exporting: "", exportBusy: false,
+  editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, showIdeas: false, attach: [], attachUrls: [], imgCaps: null, exporting: "", exportBusy: false,
   apiKey: lsGet("rc.apikey") || "", apiModel: lsGet("rc.model") || ""
 };
 
@@ -871,7 +883,8 @@ async function maybeAutoSync() {
 const bmi = w => { const h = (S.profile?.height || 169) / 100; return w / (h * h); };
 function viewProg() {
   const all = [...S.body].sort((a, b) => a.date.localeCompare(b.date));
-  const body = S.source === "all" ? all : all.filter(b => (b.source || "").toLowerCase().includes(S.source));
+  if (S.source !== "all" && !all.some(b => b.source === S.source)) S.source = "all";
+  const body = S.source === "all" ? all : all.filter(b => (b.source || "") === S.source);
   const first = all[0], last = all[all.length - 1];
   const kp = (lbl, v, u, d, goodDown, dec = 1) => {
     const cls = d == null || Math.abs(d) < 0.05 ? "neu" : (d < 0) === goodDown ? "pos" : "neg";
@@ -941,6 +954,14 @@ function md(src) {
   }
   close(); return out;
 }
+function imagesOk() { return HOSTED ? !!S.imgCaps : !!S.apiKey; }
+function maxImages() { return HOSTED ? (S.imgCaps?.maxCount || 1) : 5; }
+function clearAttach() { (S.attachUrls || []).forEach(u => URL.revokeObjectURL(u)); S.attach = []; S.attachUrls = []; }
+function addAttach(list) {
+  const ok = /^image\/(jpeg|png|webp|gif)$/;
+  for (const f of list) { if (!ok.test(f.type)) { toast("Solo se admiten imágenes JPG, PNG, WebP o GIF."); continue; } if (S.attach.length >= maxImages()) { toast(`Puedes adjuntar como máximo ${maxImages()} imagen${maxImages() > 1 ? "es" : ""} por mensaje.`); break; } S.attach.push(f); S.attachUrls.push(URL.createObjectURL(f)); }
+  render();
+}
 function suggestions() {
   const p = (S.profile?.macros || []).find(m => /prote/i.test(m.name))?.target;
   return ["¿Qué ejercicios debería subir de peso esta semana?", "Revisa mi última sesión", "¿Cómo voy de macros y pasos esta semana?", p ? `Dame un día de comidas con ${p} de proteína` : "Dame un día de comidas para mi objetivo", "Analiza mi evolución de composición corporal", "Hoy voy muy cansado, ¿qué hago?"];
@@ -948,16 +969,21 @@ function suggestions() {
 const coachReady = () => !!S.sample || (!HOSTED && !!S.apiKey);
 function viewCoach() {
   const nm = S.profile?.name;
-  const msgs = S.chat.map(t => t.role === "user" ? `<div class="msg u">${esc(t.content)}</div>` : `<div class="msg a">${md(t.content)}</div>`).join("");
+  const msgs = S.chat.map(t => t.role === "user" ? `<div class="msg u">${esc(t.content)}${t.images ? `<div class="imgnote">${t.images} imagen${t.images > 1 ? "es" : ""} adjunta${t.images > 1 ? "s" : ""}</div>` : ""}</div>` : `<div class="msg a">${md(t.content)}</div>`).join("");
   const intro = !S.chat.length ? `<div class="msg a"><p>Hola${nm ? ", " + esc(nm) : ""}. Conozco tus rutinas, tus mediciones, tus objetivos de nutrición y todo lo que registres aquí. Pregúntame sobre cargas, técnica, descansos, fatiga o comidas.</p></div>` : "";
   const live = S.busy ? `<div class="msg a ${S.liveText ? "" : "think"}" id="live">${S.liveText ? md(S.liveText) : "Pensando…"}</div>` : "";
   const off = !coachReady() && S.dbState !== "loading" ? `<div class="banner">${HOSTED ? "El entrenador solo funciona al abrir esta app dentro de Claude." : "Para usar el entrenador, añade tu clave de la API de Anthropic en <b>Perfil → Entrenador IA</b>."}</div>` : "";
   return `<div class="top"><div><div class="eyebrow">Fuerza · ${esc((S.profile?.goal || "entrenamiento").toLowerCase())} · nutrición</div><h1>Entrenador</h1></div>
     ${S.chat.length ? (S.confirmClear ? `<button class="btn danger" data-act="clearChat">Borrar conversación</button>` : `<button class="btn ghost" data-act="askClear">Nueva conversación</button>`) : ""}</div>
     ${off}<div class="chat">${intro}${msgs}${live}<div id="chatEnd"></div></div>
-    <div class="composer">${!S.busy ? `<div class="chips">${suggestions().map(s => `<button class="chip" data-suggest="${esc(s)}">${esc(s)}</button>`).join("")}</div>` : ""}
-      <div class="box"><textarea class="input" id="ask" placeholder="Escribe tu pregunta…" ${S.busy ? "disabled" : ""}>${esc(S.askDraft || "")}</textarea>
-      ${S.busy ? `<button class="btn" data-act="stop">Parar</button>` : `<button class="btn primary" data-act="send">Enviar</button>`}</div></div>`;
+    <div class="composer">
+      ${S.showIdeas && !S.busy ? `<div class="ideas" role="menu">${suggestions().map(s => `<button role="menuitem" data-suggest="${esc(s)}">${esc(s)}</button>`).join("")}</div>` : ""}
+      ${S.attach.length ? `<div class="thumbs">${S.attach.map((f, i) => `<span class="thumb"><img src="${S.attachUrls[i]}" alt="Imagen adjunta ${i + 1}"><button data-unattach="${i}" aria-label="Quitar imagen">✕</button></span>`).join("")}</div>` : ""}
+      <div class="box">
+        <button class="iconbtn" data-act="ideas" aria-expanded="${!!S.showIdeas}" aria-label="Ideas para preguntar" title="Ideas para preguntar" ${S.busy ? "disabled" : ""}><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
+        ${imagesOk() ? `<label class="iconbtn" for="coachImg" title="Adjuntar capturas o fotos" aria-label="Adjuntar imágenes"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg></label><input type="file" id="coachImg" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden ${S.busy ? "disabled" : ""}>` : ""}
+        <textarea class="input" id="ask" placeholder="${S.attach.length ? "¿Qué quieres que mire en las imágenes?" : "Escribe tu pregunta…"}" ${S.busy ? "disabled" : ""}>${esc(S.askDraft || "")}</textarea>
+        ${S.busy ? `<button class="btn" data-act="stop">Parar</button>` : `<button class="btn primary" data-act="send">Enviar</button>`}</div></div>`;
 }
 function context() {
   const pr = S.profile || {}, P = S.plans;
@@ -1010,7 +1036,14 @@ function rules() {
 DATOS DE ${nm.toUpperCase()}:
 `;
 }
-async function askAnthropic(turns, signal) {
+async function toImageBlock(file) {
+  const img = await createImageBitmap(file); const k = Math.min(1, 1568 / Math.max(img.width, img.height));
+  const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return {type: "image", source: {type: "base64", media_type: "image/jpeg", data: c.toDataURL("image/jpeg", 0.85).split(",")[1]}};
+}
+async function askAnthropic(turns, signal, files) {
+  if (files && files.length) { const last = turns[turns.length - 1]; turns = [...turns.slice(0, -1), {role: "user", content: [...await Promise.all(files.map(toImageBlock)), {type: "text", text: last.content}]}]; }
   const res = await fetch("https://api.anthropic.com/v1/messages", {method: "POST", signal,
     headers: {"content-type": "application/json", "x-api-key": S.apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true"},
     body: JSON.stringify({model: S.apiModel || DEFAULT_MODEL, max_tokens: 1500, messages: turns})});
@@ -1019,20 +1052,24 @@ async function askAnthropic(turns, signal) {
   return (data.content || []).filter(c => c.type === "text").map(c => c.text).join("\n");
 }
 async function send(text) {
-  text = (text || "").trim(); if (!text || S.busy) return;
+  text = (text || "").trim(); const files = S.attach.slice();
+  if ((!text && !files.length) || S.busy) return;
   if (!coachReady()) { toast(HOSTED ? "Abre la app dentro de Claude para usar el entrenador." : "Añade tu clave de la API en Perfil → Entrenador IA."); return; }
-  S.chat.push({role: "user", content: text}); S.askDraft = ""; S.busy = true; S.liveText = ""; S.confirmClear = false; S.tab = "coach"; render();
+  if (!text) text = "Mira estas imágenes y dime qué ves y cómo encaja con mis objetivos.";
+  S.chat.push(files.length ? {role: "user", content: text, images: files.length} : {role: "user", content: text});
+  S.askDraft = ""; S.showIdeas = false; clearAttach(); S.busy = true; S.liveText = ""; S.confirmClear = false; S.tab = "coach"; render();
   S.ctl = new AbortController();
   const turns = [{role: "user", content: rules() + context()}, {role: "assistant", content: "Entendido. Tengo todos tus datos delante. ¿En qué te ayudo?"}, ...S.chat.slice(-20).map(t => ({role: t.role, content: t.content}))];
+  if (files.length) turns[turns.length - 1] = {role: "user", content: text + `\n\n(Adjunto ${files.length} imagen${files.length > 1 ? "es" : ""}: capturas de mi móvil, por ejemplo de Samsung Health con el agua, las comidas, los pasos o los macros, o fotos de comida. Lee los datos que aparezcan (cantidades, kcal, proteína, grasas, hidratos, agua), resúmelos y valóralos frente a mis objetivos de nutrición. Si es una foto de comida, estima raciones y macros y di que es una estimación.)`};
   try {
     let out;
-    if (S.sample) ({text: out} = await S.sample(turns, {cache: false, signal: S.ctl.signal, onText: ({text}) => { S.liveText = text; const el = $("#live"); if (el) { el.classList.remove("think"); el.innerHTML = md(text); el.scrollIntoView({block: "end"}); } }}));
-    else out = await askAnthropic(turns, S.ctl.signal);
+    if (S.sample) ({text: out} = await S.sample(turns, {cache: false, signal: S.ctl.signal, ...(files.length ? {images: files} : {}), onText: ({text}) => { S.liveText = text; const el = $("#live"); if (el) { el.classList.remove("think"); el.innerHTML = md(text); el.scrollIntoView({block: "end"}); } }}));
+    else out = await askAnthropic(turns, S.ctl.signal, files);
     S.chat.push({role: "assistant", content: out});
   } catch (e) {
     if (e?.name === "AbortError") e = {code: "cancelled"};
     if (e?.text) S.chat.push({role: "assistant", content: e.text + (e.code === "cancelled" ? "\n\n*(respuesta detenida)*" : "\n\n*(respuesta interrumpida)*")});
-    const msg = {not_granted: "No se ha dado permiso para usar Claude en esta app.", rate_limited: "Demasiadas preguntas seguidas. Prueba en un rato.", refused: "No puedo responder a eso. Prueba a reformularlo.", session_expired: "Tu sesión ha caducado: vuelve a iniciar sesión.", bad_key: "La clave de la API no es válida. Revísala en Perfil.", api: "La API respondió con un error: " + (e?.message || ""), cancelled: null}[e?.code];
+    const msg = {not_granted: "No se ha dado permiso para usar Claude en esta app.", rate_limited: "Demasiadas preguntas seguidas. Prueba en un rato.", refused: "No puedo responder a eso. Prueba a reformularlo.", session_expired: "Tu sesión ha caducado: vuelve a iniciar sesión.", bad_key: "La clave de la API no es válida. Revísala en Perfil.", images_unavailable: "Esta versión de Claude no admite imágenes aquí. Escribe los datos a mano.", image_rejected: "Alguna imagen no es válida (formato o tamaño). Prueba con otra captura.", api: "La API respondió con un error: " + (e?.message || ""), cancelled: null}[e?.code];
     if (msg !== null) toast(msg || "No se pudo obtener respuesta. Inténtalo de nuevo.");
   }
   S.busy = false; S.liveText = ""; render(); persistChat();
@@ -1267,7 +1304,8 @@ document.addEventListener("click", async ev => {
   if (ds.askdel) { S.confirmDel = ds.askdel; render(); return; }
   if (ds.delbody) { try { await S.db.doc("body/" + ds.delbody).delete(); toast("Medición borrada"); } catch { toast("No se pudo borrar."); } S.confirmDel = null; return; }
   if (ds.dellog) { try { await S.db.doc("logs/" + ds.dellog).delete(); toast("Sesión borrada"); } catch { toast("No se pudo borrar."); } S.confirmDel = null; return; }
-  if (ds.suggest) { send(ds.suggest); return; }
+  if (ds.suggest) { S.showIdeas = false; send(ds.suggest); return; }
+  if (ds.unattach != null) { URL.revokeObjectURL(S.attachUrls[+ds.unattach]); S.attach.splice(+ds.unattach, 1); S.attachUrls.splice(+ds.unattach, 1); render(); return; }
   if (ds.delnote != null) { const p = JSON.parse(JSON.stringify(S.profile)); p.notes.splice(+ds.delnote, 1); S.confirmDel = null; await saveProfile(p); toast("Nota quitada"); return; }
   if (ds.delrem != null) { const p = JSON.parse(JSON.stringify(S.profile)); p.reminders.splice(+ds.delrem, 1); await saveProfile(p); toast("Recordatorio completado"); return; }
   if (ds.togglenote != null) { const p = JSON.parse(JSON.stringify(S.profile)); const n = p.notes[+ds.togglenote]; n.status = n.status === "Resuelto" ? "Pendiente" : "Resuelto"; await saveProfile(p); return; }
@@ -1297,6 +1335,7 @@ document.addEventListener("click", async ev => {
   if (a === "cancelDay") { S.editDay = null; S.confirmDel = null; render(); return; }
   if (a === "createPlan") { try { await S.db.doc("plan/" + S.rPlace).set({title: S.rPlace === "gym" ? "Gimnasio" : "Casa", subtitle: "", days: []}); } catch { toast("No se pudo crear la rutina."); } return; }
   if (a === "cancelEdit") { S.editing = null; render(); return; }
+  if (a === "ideas") { S.showIdeas = !S.showIdeas; render(); return; }
   if (a === "send") return send($("#ask").value);
   if (a === "stop") { S.ctl?.abort(); return; }
   if (a === "askClear") { S.confirmClear = true; render(); return; }
@@ -1385,7 +1424,8 @@ document.addEventListener("input", ev => {
   else if (t.id === "sdate") { S.draft.date = t.value; saveDraftLocal(); }
   else if (t.id === "ask") { S.askDraft = t.value; t.style.height = "auto"; t.style.height = Math.min(160, t.scrollHeight) + "px"; }
 });
-document.addEventListener("change", ev => { if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
+document.addEventListener("change", ev => { if (ev.target.id === "coachImg") { addAttach([...ev.target.files]); ev.target.value = ""; return; } if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
+document.addEventListener("paste", ev => { if (ev.target.id !== "ask" || !imagesOk()) return; const imgs = [...(ev.clipboardData?.files || [])].filter(f => f.type.startsWith("image/")); if (imgs.length) { ev.preventDefault(); addAttach(imgs); } });
 document.addEventListener("keydown", ev => { if (ev.target.id === "ask" && ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); send(ev.target.value); } });
 
 /* ---------- datos ---------- */
@@ -1397,7 +1437,8 @@ if (!HOSTED && "serviceWorker" in navigator && location.protocol === "https:") a
   let db = null, sample = null, mcp = null, assets = null;
   if (HOSTED) [db, sample, mcp, assets] = await Promise.all(["db", "sample", "mcp", "assets"].map(n => claude.use(n).catch(() => null)));
   else db = localDB();
-  S.sample = sample; S.db = db; S.mcp = mcp; S.assets = assets; S.dbState = db ? "on" : "off"; if (!mcp) S.vMode = "link";
+  S.sample = sample; S.db = db; S.mcp = mcp; S.assets = assets;
+  if (sample) sample.limits().then(l => { S.imgCaps = l?.images || null; if (S.tab === "coach") render(); }).catch(() => {}); S.dbState = db ? "on" : "off"; if (!mcp) S.vMode = "link";
   if (!db) { render(); return; }
   const err = () => {};
   db.collection("videos").onSnapshot(s => { S.videos = {}; s.docs.forEach(d => S.videos[d.id] = d.data()); soon(); }, err);
