@@ -615,9 +615,15 @@ function weekCard() {
   const meta = [last ? `Peso <b>${fmtN(last.weight)} kg</b>` : "", nw ? `Pesaje en <b>${Math.round((new Date(nw) - new Date(t)) / 864e5)} días</b>` : ""].filter(Boolean).map(x => `<span>${x}</span>`).join("");
   return `<div class="weekcard">${ring}<div style="min-width:0"><div class="eyebrow">Entrenamientos esta semana</div><div class="wt">${n}<small> / ${nDays}</small></div><div class="wdots">${dots}</div>${meta ? `<div class="wmeta">${meta}</div>` : ""}</div></div>`;
 }
+/* Saludo según la hora: días 6–14 h, tardes 14–21 h, noches el resto (horario español). */
+function greeting() {
+  const h = new Date().getHours(), nm = String(S.profile?.name || "").trim().split(/\s+/)[0];
+  const g = h >= 6 && h < 14 ? "Buenos días" : h >= 14 && h < 21 ? "Buenas tardes" : "Buenas noches";
+  return nm ? `${g}, ${nm}` : g;
+}
 function viewLog() {
   const plan = S.plans[S.place];
-  const head = `<div class="top"><div><div class="eyebrow">${fmtDate(S.date, {weekday: "long", day: "numeric", month: "long"})}</div><h1>Registrar sesión</h1></div>
+  const head = `<div class="top"><div><div class="eyebrow">${fmtDate(S.date, {weekday: "long", day: "numeric", month: "long"})}</div><h1>${esc(greeting())}</h1></div>
     <div class="seg" role="group" aria-label="Lugar"><button data-place="gym" aria-pressed="${S.place === "gym"}">Gimnasio</button><button data-place="home" aria-pressed="${S.place === "home"}">Casa</button></div></div>`;
   if (!plan || !plan.days.length) return head + `<div class="empty">${plan ? "Esta rutina aún no tiene días. Créalos en la pestaña <b>Rutinas</b>." : S.profileLoaded && !S.profile ? "Empieza creando tu perfil en la pestaña <b>Perfil</b>." : "Aquí aparecerán los días de tu rutina en cuanto se carguen."}</div>`;
   ensureDraft();
