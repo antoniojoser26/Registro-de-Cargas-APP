@@ -19,7 +19,8 @@ Es un único archivo HTML, sin servidor ni instalación. Funciona en el móvil y
 ```
 index.html              La app completa
 manifest.webmanifest    Datos para instalarla en el móvil
-icon.svg                Icono
+icon.svg, icon-*.png     Iconos
+sw.js                   Service worker: instalación y uso sin conexión
 docs/MANUAL.md          Manual de uso
 docs/FUNCIONAMIENTO.md  Funcionamiento interno y modelo de datos
 ejemplos/               Copia de seguridad de ejemplo
@@ -50,7 +51,7 @@ ejemplos/               Copia de seguridad de ejemplo
 1. Haz un fork de este repositorio o sube estos archivos a uno tuyo.
 2. En **Settings → Pages**, elige la rama `main` y la carpeta `/ (root)`.
 3. Abre `https://<tu-usuario>.github.io/<repositorio>/` en el móvil.
-4. En el navegador, usa **Añadir a pantalla de inicio**.
+4. **Android (Chrome)**: menú ⋮ → **Instalar aplicación**. Queda en el cajón de aplicaciones con su icono, se abre a pantalla completa y funciona sin conexión (salvo el entrenador). **iPhone (Safari)**: Compartir → **Añadir a pantalla de inicio**.
 
 ### Opción 2: en local
 

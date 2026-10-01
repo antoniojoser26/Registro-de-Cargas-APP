@@ -111,8 +111,19 @@ Muestra el historial completo. Toca una sesión para ver el detalle o borrarla.
 
 ## 8. Instalar en el móvil
 
-- **Dentro de Claude**: abre la app desde la app de Claude o desde claude.ai en el navegador del móvil.
-- **Versión de GitHub**: abre la dirección de GitHub Pages en el navegador del móvil y elige **Añadir a pantalla de inicio**.
+### Versión de GitHub (se instala como una app)
+
+1. En el móvil Android, abre la dirección de GitHub Pages en **Chrome**.
+2. Toca el menú **⋮** y elige **Instalar aplicación** (en algunos móviles aparece como **Añadir a pantalla de inicio → Instalar**).
+3. La app aparece en el cajón de aplicaciones y en la pantalla de inicio con su propio icono. Se abre a pantalla completa, sin barra del navegador, y funciona sin conexión salvo el entrenador.
+
+En iPhone: abre la dirección en Safari, toca **Compartir** y elige **Añadir a pantalla de inicio**.
+
+### Dentro de Claude (con tus datos de Claude)
+
+Abre la app desde la app de Claude, o abre su enlace en Chrome con tu cuenta de claude.ai iniciada y usa **⋮ → Añadir a pantalla de inicio**. Este acceso directo abre la app en Chrome; no es una app instalada.
+
+Las dos versiones guardan sus datos por separado. Para pasar tus datos de una a otra, usa la copia de seguridad (JSON).
 
 ## 9. Preguntas frecuentes
 

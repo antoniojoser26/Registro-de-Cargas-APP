@@ -7,7 +7,7 @@
 <meta name="description" content="Registro de entrenamientos de fuerza, composición corporal, nutrición y entrenador con IA.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Registro de Cargas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1077,6 +1077,8 @@ document.addEventListener("keydown", ev => { if (ev.target.id === "ask" && ev.ke
 /* ---------- datos ---------- */
 let rTimer; const soon = () => { clearTimeout(rTimer); rTimer = setTimeout(() => { const a = document.activeElement; if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && S.tab !== "prog") return; render(); }, 30); };
 render();
+/* Versión independiente instalada desde GitHub Pages: registra el service worker (instalable y sin conexión). */
+if (!HOSTED && "serviceWorker" in navigator && location.protocol === "https:") addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 (async () => {
   let db = null, sample = null, mcp = null, assets = null;
   if (HOSTED) [db, sample, mcp, assets] = await Promise.all(["db", "sample", "mcp", "assets"].map(n => claude.use(n).catch(() => null)));
