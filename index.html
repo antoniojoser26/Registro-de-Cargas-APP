@@ -229,6 +229,11 @@ section > h2::before,section > .row > h2::before,.day-h h2::before{content:"";wi
 .sets .n{color:var(--accent)}
 .daypick button[aria-pressed="true"]{background:linear-gradient(135deg,var(--accent-2),var(--accent));color:var(--on-accent);box-shadow:0 6px 16px rgba(29,78,216,.35)}
 .daypick button[aria-pressed="true"] span,.daypick button[aria-pressed="true"] .next{color:var(--on-accent);opacity:.9}
+.daypick button.done{background:var(--good-soft);border-color:var(--plate-green);box-shadow:inset 0 0 0 1px var(--plate-green)}
+.daypick button.done span{color:var(--good);font-weight:600}
+.daypick button.done b{color:var(--good)}
+.daypick button.done[aria-pressed="true"]{background:linear-gradient(135deg,#25b06f,var(--plate-green));color:#fff;box-shadow:0 6px 16px rgba(22,149,90,.35)}
+.daypick button.done[aria-pressed="true"] span,.daypick button.done[aria-pressed="true"] b{color:#fff}
 .ex-tip{background:var(--yellow-soft);border-left:3px solid var(--plate-yellow)}
 .feel .chip[data-v="Fácil"][aria-pressed="true"]{background:var(--plate-green);border-color:var(--plate-green)}
 .feel .chip[data-v="Bien"][aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
@@ -405,6 +410,17 @@ function render() {
 }
 
 /* ---------- vista: registrar ---------- */
+/* Días de rutina ya registrados en la semana actual (lunes a domingo), por posición del día en el plan:
+   «Día 1» cuenta como hecho tanto si lo entrenaste en el gimnasio como en casa. */
+function weekDone() {
+  const t = todayISO(), mon = isoAdd(t, -((wdOf(t) + 6) % 7)), sun = isoAdd(mon, 6), out = new Set();
+  for (const l of S.logs) {
+    if (!l.date || l.date < mon || l.date > sun) continue;
+    const i = (S.plans[l.place]?.days || []).findIndex(d => d.name === l.day);
+    if (i >= 0) out.add(i);
+  }
+  return out;
+}
 function viewLog() {
   const plan = S.plans[S.place];
   const head = `<div class="top"><div><div class="eyebrow">${fmtDate(S.date, {weekday: "long", day: "numeric", month: "long"})}</div><h1>Registrar sesión</h1></div>
@@ -415,8 +431,10 @@ function viewLog() {
   const workNote = wk ? `<p class="small" style="margin-bottom:8px"><b>Hoy:</b> ${esc(workLabel(wk))}${wk.tele ? " → te propongo entrenar en casa." : ""}${wk.weigh ? " Cuando tengas los datos del pesaje, apúntalos en <b>Progreso → Añadir medición</b>." : ""}</p>` : "";
   const next = weekdayIdx(S.place, S.date);
   const rest = next == null ? `<p class="small muted">Hoy es fin de semana: no toca ningún día del plan. Si entrenas igualmente, elige el día abajo.</p>` : "";
+  const doneWeek = weekDone();
   const days = workNote + rest + `<div class="daypick" role="group" aria-label="Día">${plan.days.map((d, i) => {
-    const [a, b] = d.name.split(":"); return `<button data-day="${i}" aria-pressed="${i === S.dayIdx}"><span>${esc(a.trim())}${i === next ? ' · <span class="next">toca hoy</span>' : ""}</span><b>${esc((b || a).trim())}</b></button>`; }).join("")}</div>`;
+    const [a, b] = d.name.split(":"), done = doneWeek.has(i);
+    return `<button data-day="${i}" aria-pressed="${i === S.dayIdx}" class="${done ? "done" : ""}"><span>${done ? "✓ " : ""}${esc(a.trim())}${done ? " · hecho" : i === next ? ' · <span class="next">toca hoy</span>' : ""}</span><b>${esc((b || a).trim())}</b></button>`; }).join("")}</div>`;
   const d = S.draft;
   const exs = d.entries.map((e, i) => {
     const px = plan.days[S.dayIdx].ex.find(x => x.n === e.n) || {};

@@ -19,6 +19,7 @@ La app tiene siete pestañas, en la barra inferior: **Hoy** (registrar la sesió
 
 1. Elige **Gimnasio** o **Casa** arriba a la derecha. Si en la **Agenda** hoy es día de teletrabajo, la app ya propone **Casa**; debajo verás tu turno de hoy.
 2. La app marca con **toca hoy** el día que corresponde a hoy y lo deja seleccionado. En fin de semana no marca ninguno; elige el día a mano si entrenas.
+   Los días que ya has registrado esta semana (de lunes a domingo) aparecen en **verde** con «✓ hecho», da igual si los hiciste en el gimnasio o en casa. Cada lunes vuelven a quedar en blanco.
 3. Cada ejercicio aparece rellenado:
     - **Series y repeticiones**: las del objetivo del plan. El número gris dentro de la casilla de reps es el objetivo de esa serie.
     - **Peso**: el que usaste la última vez en ese ejercicio y en ese lugar. Si es la primera vez, el del campo «Último peso» del plan.
