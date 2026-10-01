@@ -13,7 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout: app de una columna, pensada para el móvil en el gimnasio; barra de pestañas fija abajo. Colores de los discos olímpicos: azul 20 kg (acento, peso), rojo 25 kg (grasa), verde 10 kg (músculo), amarillo 15 kg (IMC / hidratos). */
+/* Siempre en modo claro, también si el móvil está en modo oscuro.
+   Layout: app de una columna, pensada para el móvil en el gimnasio; barra de pestañas fija abajo. Colores de los discos olímpicos: azul 20 kg (acento, peso), rojo 25 kg (grasa), verde 10 kg (músculo), amarillo 15 kg (IMC / hidratos). */
 :root{
   --bg:#EEF1F7; --surface:#FFFFFF; --sunk:#E4E9F2; --ink:#10162A; --muted:#55607A; --line:#D3DAE6;
   --accent:#1D4ED8; --accent-2:#3B6CF6; --accent-soft:#DCE6FF; --on-accent:#FFFFFF;
@@ -25,23 +26,8 @@
   --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
   --r:10px;
+  color-scheme:light;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0B0E15; --surface:#151A24; --sunk:#1E2532; --ink:#EAEEF6; --muted:#9AA5BA; --line:#283042;
-  --accent:#6E95FF; --accent-2:#8FAEFF; --accent-soft:#1C2A52; --on-accent:#0A1022;
-  --plate-red:#FF6B5F; --plate-yellow:#FFC94A; --plate-green:#3FD18A; --plate-blue:#6E95FF;
-  --good:#3FD18A; --good-soft:#123527; --warn:#FFC24D; --warn-soft:#3B2C10; --red-soft:#42201E; --yellow-soft:#3A3012;
-  --hero-1:#0F1A3D; --hero-2:#25408F; --on-hero:#FFFFFF; --on-hero-muted:#AFC0EE;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35); --shadow-lg:0 10px 30px rgba(0,0,0,.55);
-  color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0B0E15; --surface:#151A24; --sunk:#1E2532; --ink:#EAEEF6; --muted:#9AA5BA; --line:#283042;
-  --accent:#6E95FF; --accent-2:#8FAEFF; --accent-soft:#1C2A52; --on-accent:#0A1022;
-  --plate-red:#FF6B5F; --plate-yellow:#FFC94A; --plate-green:#3FD18A; --plate-blue:#6E95FF;
-  --good:#3FD18A; --good-soft:#123527; --warn:#FFC24D; --warn-soft:#3B2C10; --red-soft:#42201E; --yellow-soft:#3A3012;
-  --hero-1:#0F1A3D; --hero-2:#25408F; --on-hero:#FFFFFF; --on-hero-muted:#AFC0EE;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35); --shadow-lg:0 10px 30px rgba(0,0,0,.55);
-  color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
