@@ -20,14 +20,16 @@ La app tiene siete pestañas, en la barra inferior: **Hoy** (registrar la sesió
 1. Elige **Gimnasio** o **Casa** arriba a la derecha. Si en la **Agenda** hoy es día de teletrabajo, la app ya propone **Casa**; debajo verás tu turno de hoy.
 2. La app marca con **toca hoy** el día que corresponde a hoy y lo deja seleccionado. En fin de semana no marca ninguno; elige el día a mano si entrenas.
    Los días que ya has registrado esta semana (de lunes a domingo) aparecen en **verde** con «✓ hecho», da igual si los hiciste en el gimnasio o en casa. Cada lunes vuelven a quedar en blanco.
-3. Cada ejercicio aparece rellenado:
+3. Debajo de los días aparece **La última vez**: lo que hiciste en la sesión anterior de ese mismo día de rutina (gimnasio o casa), con cada ejercicio, sus series (kg × reps), la sensación, las notas y la energía. Tócalo para plegarlo o desplegarlo; la app recuerda tu elección.
+4. Cada ejercicio aparece rellenado:
     - **Series y repeticiones**: las del objetivo del plan. El número gris dentro de la casilla de reps es el objetivo de esa serie.
     - **Peso**: el que usaste la última vez en ese ejercicio y en ese lugar. Si es la primera vez, el del campo «Último peso» del plan.
-4. Ajusta con **−** y **+**. El peso cambia de 2,5 en 2,5 kg y las repeticiones de 1 en 1. También puedes escribir directamente; se admite coma decimal.
-5. **+ Añadir serie** añade una serie más, copiando el peso de la anterior.
-6. Marca la **sensación** de cada ejercicio (Fácil, Bien, Duro, Al fallo) y añade notas si quieres: molestias, agarre, técnica…
-7. En **Cómo te has sentido hoy**, marca la energía del 1 al 5, la fecha y las sensaciones generales.
-8. Pulsa **Guardar sesión**.
+    - **Antes**: a la izquierda de cada serie, lo que hiciste en esa serie la vez anterior. Se pone en **verde** cuando la superas (más peso, o el mismo peso con más repeticiones), con borde gris si la igualas y en amarillo si estás por debajo.
+5. Ajusta con **−** y **+**. El peso cambia de 2,5 en 2,5 kg y las repeticiones de 1 en 1. También puedes escribir directamente; se admite coma decimal.
+6. **+ Añadir serie** añade una serie más, copiando el peso de la anterior.
+7. Marca la **sensación** de cada ejercicio (Fácil, Bien, Duro, Al fallo) y añade notas si quieres: molestias, agarre, técnica…
+8. En **Cómo te has sentido hoy**, marca la energía del 1 al 5, la fecha y las sensaciones generales.
+9. Pulsa **Guardar sesión**.
 
 Más detalles:
 
