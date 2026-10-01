@@ -155,12 +155,26 @@ details.sess summary::-webkit-details-marker{display:none}
 
 /* nav */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));z-index:5}
-nav.tabs .in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);gap:2px}
-nav.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:8px;color:var(--muted);font-size:11.5px;font-weight:600}
+nav.tabs .in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0}
+nav.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-radius:8px;color:var(--muted);font-size:10px;letter-spacing:-.01em;font-weight:600;white-space:nowrap;min-width:0;overflow:hidden}
 nav.tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 nav.tabs button[aria-current="page"]{color:var(--accent)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:8px;font-size:14px;font-weight:500;z-index:9;max-width:calc(100% - 32px)}
 .empty{border:1px dashed var(--line);border-radius:var(--r);padding:18px;text-align:center;color:var(--muted);font-size:14px}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cwh{font-size:11px;font-weight:600;color:var(--muted);text-align:center;padding-bottom:2px}
+.cday{border:1px solid var(--line);background:var(--surface);border-radius:8px;min-height:62px;padding:4px 3px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;min-width:0;overflow:hidden}
+.cday.past{opacity:.6}
+.cday.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.cday.sel{background:var(--accent-soft)}
+.cday .dn{font-family:var(--f-mono);font-size:11.5px;color:var(--ink);white-space:nowrap}
+.cday .tags{display:flex;gap:2px;flex-wrap:wrap}
+.cday .tr{font-size:10.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+i.sh{font-style:normal;font-size:10px;font-weight:700;border-radius:4px;padding:0 4px;line-height:15px;display:inline-block}
+i.sh.M{background:var(--accent-soft);color:var(--accent)}
+i.sh.T{background:var(--warn-soft);color:var(--warn)}
+i.sh.tele{background:var(--good-soft);color:var(--good)}
+i.sh.off{background:var(--sunk);color:var(--muted)}
 .vex{border-top:1px solid var(--line);padding-block:12px;display:flex;flex-direction:column;gap:6px}
 .vex:first-of-type{border-top:0}
 .vitem{background:var(--sunk);border-radius:8px;padding:8px 10px}
@@ -233,11 +247,12 @@ const S = {
 };
 
 const TABS = [
-  ["log", "Registrar", '<path d="M4 12h3M17 12h3M7 8v8M17 8v8M9.5 10v4M14.5 10v4M9.5 12h5"/>'],
+  ["log", "Hoy", '<path d="M4 12h3M17 12h3M7 8v8M17 8v8M9.5 10v4M14.5 10v4M9.5 12h5"/>'],
   ["plan", "Rutinas", '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/>'],
   ["vid", "Vídeos", '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/>'],
+  ["cal", "Agenda", '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'],
   ["prog", "Progreso", '<path d="M4 19h16"/><path d="M5 15l4-5 4 3 6-7"/>'],
-  ["coach", "Entrenador", '<path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v9"/><path d="M9 10h6M9 13h4"/>'],
+  ["coach", "Coach", '<path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v9"/><path d="M9 10h6M9 13h4"/>'],
   ["me", "Perfil", '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>']
 ];
 
@@ -296,9 +311,10 @@ function renderTabs() {
 function render() {
   renderTabs();
   const banner = S.dbState === "off" ? `<div class="banner">Abre esta app dentro de Claude para guardar y ver tus datos. Ahora mismo no se pueden leer ni guardar.</div>` : "";
-  const v = {log: viewLog, plan: viewPlan, vid: viewVid, prog: viewProg, coach: viewCoach, me: viewMe}[S.tab]();
+  const v = {log: viewLog, plan: viewPlan, vid: viewVid, cal: viewCal, prog: viewProg, coach: viewCoach, me: viewMe}[S.tab]();
   $("#app").innerHTML = banner + v;
   if (S.tab === "coach") { const c = $("#chatEnd"); c && c.scrollIntoView({block: "end"}); }
+  if (S.tab === "log") { const dp = $(".daypick"), b = dp && dp.querySelector('[aria-pressed="true"]'); if (b) dp.scrollLeft = Math.max(0, b.offsetLeft - dp.offsetLeft - 16); }
 }
 
 /* ---------- vista: registrar ---------- */
@@ -308,9 +324,11 @@ function viewLog() {
     <div class="seg" role="group" aria-label="Lugar"><button data-place="gym" aria-pressed="${S.place === "gym"}">Gimnasio</button><button data-place="home" aria-pressed="${S.place === "home"}">Casa</button></div></div>`;
   if (!plan || !plan.days.length) return head + `<div class="empty">${plan ? "Esta rutina aún no tiene días. Créalos en la pestaña <b>Rutinas</b>." : S.profileLoaded && !S.profile ? "Empieza creando tu perfil en la pestaña <b>Perfil</b>." : "Aquí aparecerán los días de tu rutina en cuanto se carguen."}</div>`;
   ensureDraft();
+  const wk = workDay(S.date);
+  const workNote = wk ? `<p class="small" style="margin-bottom:8px"><b>Hoy:</b> ${esc(workLabel(wk))}${wk.tele ? " → te propongo entrenar en casa." : ""}</p>` : "";
   const next = weekdayIdx(S.place, S.date);
   const rest = next == null ? `<p class="small muted">Hoy es fin de semana: no toca ningún día del plan. Si entrenas igualmente, elige el día abajo.</p>` : "";
-  const days = rest + `<div class="daypick" role="group" aria-label="Día">${plan.days.map((d, i) => {
+  const days = workNote + rest + `<div class="daypick" role="group" aria-label="Día">${plan.days.map((d, i) => {
     const [a, b] = d.name.split(":"); return `<button data-day="${i}" aria-pressed="${i === S.dayIdx}"><span>${esc(a.trim())}${i === next ? ' · <span class="next">toca hoy</span>' : ""}</span><b>${esc((b || a).trim())}</b></button>`; }).join("")}</div>`;
   const d = S.draft;
   const exs = d.entries.map((e, i) => {
@@ -340,7 +358,7 @@ function viewLog() {
     <div class="grid2" style="margin-top:10px"><div class="field"><label for="sdate">Fecha</label><input type="date" class="input" id="sdate" value="${esc(d.date)}"></div></div>
     <textarea class="input" style="margin-top:10px" id="snote" placeholder="Sensaciones generales, sueño, fatiga del trayecto, dolor…">${esc(d.note)}</textarea></div>`;
   return head + `<div class="stack">${days}${exs}${general}</div>
-    <div class="savebar"><span class="small muted">El borrador se guarda en este dispositivo hasta que lo registres.</span><div class="row"><button class="btn ghost" data-act="resetDraft">Reiniciar</button><button class="btn primary" data-act="saveSession" ${S.dbState !== "on" ? "disabled" : ""}>Guardar sesión</button></div></div>`;
+    <div class="savebar"><span class="small muted">Borrador guardado en este dispositivo.</span><div class="row"><button class="btn ghost" data-act="resetDraft">Reiniciar</button><button class="btn primary" data-act="saveSession" ${S.dbState !== "on" ? "disabled" : ""}>Guardar sesión</button></div></div>`;
 }
 function progPill(p) {
   if (!p || p === "N/A") return "";
@@ -587,6 +605,146 @@ function viewNut() {
     ${days.length ? `<div class="panel tbl-wrap" style="margin-top:10px"><table class="ref"><thead><tr><th>Día</th><th>Pasos</th><th>kcal</th><th>Prot.</th><th>Grasa</th><th>HC</th></tr></thead><tbody>${days.slice(0, 14).map(d => `<tr><td>${fmtDate(d.date, {weekday: "short", day: "numeric", month: "short"})}</td>${["steps", "kcal", "protein", "fat", "carbs"].map(k => `<td class="num">${d[k] == null ? "—" : fmtN(d[k], 0)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : ""}</section>`;
 }
 
+/* ---------- calendario de trabajo (turnos y teletrabajo) ---------- */
+const CAL_SERVER = "Google Calendar";
+const TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Madrid"; } catch { return "Europe/Madrid"; } })();
+const isoAdd = (iso, n) => { const [y, m, d] = iso.split("-").map(Number); const x = new Date(y, m - 1, d + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
+const wdOf = iso => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).getDay(); };
+/* Un evento cuenta si su título habla de turno (mañana/tarde o códigos M1, T2…), teletrabajo o día libre. */
+function classifyEvent(title) {
+  const t = String(title || "");
+  const tele = /teletrabajo|teletrabaj|remoto|home ?office|desde casa/i.test(t);
+  const off = /vacaciones|d[ií]a libre|libranza|festivo|\bbaja\b/i.test(t);
+  let shift = /\btarde\b/i.test(t) ? "T" : /\bma[ñn]ana\b/i.test(t) ? "M" : null;
+  if (!shift) { const m = t.match(/\b([MT])\d\b/); if (m) shift = m[1]; }
+  return tele || off || shift ? {shift, tele, off} : null;
+}
+/* Días que cubre un evento: los de día completo terminan el día anterior al «end»; los de hora incluyen el día en que acaban (salvo a las 00:00). */
+function eventDays(ev) {
+  const s = ev.start || {}, e = ev.end || {};
+  const sd = String(s.date || s.dateTime || "").slice(0, 10); if (!/^\d{4}-\d{2}-\d{2}$/.test(sd)) return [];
+  let ed;
+  if (s.date) ed = isoAdd(String(e.date || s.date).slice(0, 10), -1);
+  else { const raw = String(e.dateTime || s.dateTime); ed = raw.slice(0, 10); if (/T00:00/.test(raw) && ed > sd) ed = isoAdd(ed, -1); }
+  if (ed < sd) ed = sd;
+  const out = []; for (let d = sd; d <= ed && out.length < 62; d = isoAdd(d, 1)) out.push(d); return out;
+}
+function buildCalDays(events) {
+  const days = {};
+  for (const ev of events) {
+    if (!ev || ev.status === "cancelled") continue; const c = classifyEvent(ev.summary); if (!c) continue;
+    for (const d of eventDays(ev)) {
+      const o = days[d] ||= {shift: null, tele: false, off: false, titles: []};
+      if (c.shift) o.shift = c.shift; o.tele = o.tele || c.tele; o.off = o.off || c.off;
+      const tt = String(ev.summary || "").trim(); if (tt && !o.titles.includes(tt) && o.titles.length < 4) o.titles.push(tt);
+    }
+  }
+  return days;
+}
+function workDay(iso) {
+  const auto = S.cal?.days?.[iso] || null, ov = S.calOv?.[iso];
+  return ov ? {titles: [], ...(auto || {}), ...ov, manual: true} : auto;
+}
+function workLabel(w) {
+  if (!w) return "";
+  if (w.off) return "Libre";
+  return [w.shift === "M" ? "Turno de mañana" : w.shift === "T" ? "Turno de tarde" : "", w.tele ? "Teletrabajo" : w.shift ? "Presencial" : ""].filter(Boolean).join(" · ");
+}
+const placeFor = iso => workDay(iso)?.tele ? "home" : "gym";
+const OV_OPTS = [["auto", "Automático (Google Calendar)"], ["M", "Mañana · presencial"], ["T", "Tarde · presencial"], ["TM", "Teletrabajo · mañana"], ["TT", "Teletrabajo · tarde"], ["TE", "Teletrabajo"], ["L", "Libre"]];
+const ovValue = {M: {shift: "M", tele: false, off: false}, T: {shift: "T", tele: false, off: false}, TM: {shift: "M", tele: true, off: false}, TT: {shift: "T", tele: true, off: false}, TE: {shift: null, tele: true, off: false}, L: {shift: null, tele: false, off: true}};
+const ovKey = o => !o ? "auto" : o.off ? "L" : o.tele ? (o.shift === "M" ? "TM" : o.shift === "T" ? "TT" : "TE") : o.shift || "auto";
+function calErrMsg(e) {
+  return {server_not_connected: "Google Calendar no está conectado. Añádelo en claude.ai → Ajustes → Conectores.", needs_reauth: "Vuelve a conectar Google Calendar en claude.ai → Ajustes → Conectores.", not_in_manifest: "No has dado permiso a esta app para leer tu Google Calendar.", selection_required: "Elige qué cuenta de Google Calendar usar en el aviso de Claude.", blocked_by_policy: "Tu organización bloquea Google Calendar aquí.", server_unavailable: "Google Calendar no responde ahora. Inténtalo en un momento.", tool_error: "Google Calendar devolvió un error: " + (e?.message || "")}[e?.code] || "No se pudo leer el calendario. Inténtalo de nuevo.";
+}
+async function syncCalendar(manual) {
+  if (!S.mcp || !S.db || S.calBusy) return;
+  S.calBusy = true; S.calErr = ""; if (manual || S.tab === "cal") render();
+  const from = isoAdd(todayISO(), -14), to = isoAdd(todayISO(), 42);
+  const ids = S.cal?.calendars?.length ? S.cal.calendars : ["primary"];
+  try {
+    let events = [];
+    for (const id of ids) {
+      let token = null, n = 0;
+      do {
+        const input = {startTime: from + "T00:00:00", endTime: to + "T00:00:00", timeZone: TZ, orderBy: "startTime", pageSize: 250};
+        if (id !== "primary") input.calendarId = id; if (token) input.pageToken = token;
+        const p = (await S.mcp.callTool(CAL_SERVER, "list_events", input, {cache: false})).payload || {};
+        events = events.concat(Array.isArray(p.events) ? p.events : []); token = p.nextPageToken || null;
+      } while (token && ++n < 5);
+    }
+    await S.db.doc("calendar/main").set({syncedAt: new Date().toISOString(), calendars: S.cal?.calendars || [], calNames: S.cal?.calNames || {}, from, to, days: buildCalDays(events)});
+  } catch (e) { S.calErr = calErrMsg(e); }
+  S.calBusy = false; render();
+}
+async function loadCalendars() {
+  if (!S.mcp) return; S.calList = "loading"; render();
+  try { const p = (await S.mcp.callTool(CAL_SERVER, "list_calendars", {}, {cache: false})).payload || {}; S.calList = (p.calendars || []).filter(c => c && c.id).map(c => ({id: String(c.id), name: String(c.summary || c.id)})); }
+  catch (e) { S.calList = null; S.calErr = calErrMsg(e); }
+  render();
+}
+function viewCal() {
+  const today = todayISO(); if (!S.calSel) S.calSel = today;
+  const head = `<div class="top"><div><div class="eyebrow">Turnos y teletrabajo</div><h1>Calendario</h1></div></div>`;
+  const names = S.cal?.calNames || {}, chosen = S.cal?.calendars?.length ? S.cal.calendars : ["primary"];
+  const sync = S.mcp ? `<div class="panel stack" style="margin-bottom:14px">
+      <div class="row between"><div style="min-width:0"><div class="eyebrow">Google Calendar</div><div class="small">${S.cal?.syncedAt ? "Sincronizado " + new Date(S.cal.syncedAt).toLocaleString("es-ES", {weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : "Aún sin sincronizar"} · ${chosen.map(id => id === "primary" ? "calendario principal" : esc(names[id] || "otro calendario")).join(", ")}</div></div>
+        <div class="row"><button class="btn primary" data-act="calSync" ${S.calBusy ? "disabled" : ""}>${S.calBusy ? "Sincronizando…" : "Sincronizar"}</button><button class="btn ghost" data-act="calChoose">Elegir calendarios</button></div></div>
+      ${S.calErr ? `<p class="small" style="color:var(--plate-red)">${esc(S.calErr)}</p>` : ""}
+      ${Array.isArray(S.calList) ? `<div class="stack" style="gap:6px">${S.calList.map(c => `<label class="row small" style="gap:8px"><input type="checkbox" data-calpick="${esc(c.id)}" ${chosen.includes(c.id) || (chosen[0] === "primary" && c.name === c.id && !c.id.includes("group.")) ? "checked" : ""}> ${esc(c.name)}</label>`).join("")}
+        <div class="row"><button class="btn" data-act="calSaveList">Guardar selección</button><button class="btn ghost" data-act="calCancelList">Cancelar</button></div></div>` : S.calList === "loading" ? `<p class="small muted">Cargando tus calendarios…</p>` : ""}
+      <p class="small muted">Lee los eventos cuyo título incluye «mañana», «tarde», un código de turno (M1, T2…), «teletrabajo» o «vacaciones / día libre / festivo». Si un día no cuadra, corrígelo abajo.</p></div>`
+    : `<div class="panel" style="margin-bottom:14px"><p class="small">${HOSTED ? "La conexión con Google Calendar solo funciona al abrir la app dentro de Claude." : "Marca tus turnos y días de teletrabajo tocando cada día. Puedes aplicar un turno a toda la semana de una vez."}</p></div>`;
+  // cuadrícula: semana anterior + 4 siguientes, de lunes a domingo
+  const wd = wdOf(today), monday = isoAdd(today, -((wd + 6) % 7) - 7);
+  const logged = new Set(S.logs.map(l => l.date));
+  const cells = Array.from({length: 35}, (_, i) => {
+    const iso = isoAdd(monday, i), w = workDay(iso), dIdx = weekdayIdx("gym", iso), pl = placeFor(iso);
+    const plan = S.plans[pl], tr = dIdx != null && plan?.days?.[dIdx] && !w?.off ? `D${dIdx + 1}` : "";
+    const dnum = +iso.slice(8), first = dnum === 1 || i === 0;
+    return `<button class="cday${iso === today ? " today" : ""}${iso === S.calSel ? " sel" : ""}${iso < today ? " past" : ""}" data-calday="${iso}" aria-label="${fmtDate(iso, {weekday: "long", day: "numeric", month: "long"})}${w ? ": " + workLabel(w) : ""}">
+      <span class="dn">${dnum}${first ? " " + fmtDate(iso, {month: "short"}).replace(".", "") : ""}</span>
+      <span class="tags">${w?.off ? `<i class="sh off">L</i>` : w?.shift ? `<i class="sh ${w.shift}">${w.shift}</i>` : ""}${w?.tele ? `<i class="sh tele">Casa</i>` : ""}</span>
+      <span class="tr">${logged.has(iso) ? "✓ " : ""}${tr}</span></button>`;
+  }).join("");
+  const grid = `<div class="calgrid">${["L", "M", "X", "J", "V", "S", "D"].map(d => `<div class="cwh">${d}</div>`).join("")}${cells}</div>
+    <div class="row small muted" style="margin-top:8px;gap:12px"><span><i class="sh M">M</i> mañana</span><span><i class="sh T">T</i> tarde</span><span><i class="sh tele">Casa</i> teletrabajo</span><span><i class="sh off">L</i> libre</span><span>D1… día de rutina · ✓ entrenado</span></div>`;
+  // detalle del día elegido
+  const iso = S.calSel, w = workDay(iso), dIdx = weekdayIdx("gym", iso), pl = placeFor(iso), plan = S.plans[pl];
+  const sess = S.logs.filter(l => l.date === iso);
+  const detail = `<div class="panel stack" style="margin-top:14px">
+    <div><div class="eyebrow">${fmtDate(iso, {weekday: "long", day: "numeric", month: "long"})}</div>
+      <div style="font-weight:600;margin-top:2px">${w ? esc(workLabel(w)) : "Sin turno marcado"}${w?.manual ? ' <span class="pill keep">ajuste manual</span>' : ""}</div>
+      ${(w?.titles || []).length ? `<div class="small muted">${w.titles.map(esc).join(" · ")}</div>` : ""}</div>
+    <div class="small">${w?.off ? "Día libre." : dIdx != null && plan?.days?.[dIdx] ? `Toca <b>${esc(plan.days[dIdx].name)}</b> en <b>${pl === "home" ? "casa" : "el gimnasio"}</b>${w?.tele ? " (teletrabajo)" : ""}.` : "No toca ningún día del plan."}
+      ${sess.length ? `<br>Registrado: ${sess.map(l => esc(l.day) + " (" + (l.place === "home" ? "casa" : "gimnasio") + ")").join(", ")}.` : ""}</div>
+    <div class="grid2"><div class="field"><label for="cal-ov">Corregir este día</label><select class="input" id="cal-ov">${OV_OPTS.map(([k, l]) => `<option value="${k}" ${ovKey(S.calOv?.[iso]) === k ? "selected" : ""}>${l}</option>`).join("")}</select></div></div>
+    <div class="row"><button class="btn primary" data-act="calSaveDay">Guardar día</button><button class="btn" data-act="calSaveWeek">Aplicar de lunes a viernes</button></div></div>`;
+  return head + sync + grid + detail;
+}
+async function saveOverrides(days) {
+  const cur = {...(S.calOv || {})};
+  for (const [d, v] of Object.entries(days)) { if (v) cur[d] = v; else delete cur[d]; }
+  // se conservan solo los ajustes de los últimos 60 días en adelante
+  const min = isoAdd(todayISO(), -60); for (const d of Object.keys(cur)) if (d < min) delete cur[d];
+  try { await S.db.doc("calendar/overrides").set({days: cur}); toast("Calendario actualizado"); } catch { toast("No se pudo guardar el ajuste."); }
+}
+function scheduleContext() {
+  const t = todayISO(), lines = [];
+  for (let i = -3; i <= 13; i++) { const iso = isoAdd(t, i), w = workDay(iso); if (!w) continue;
+    lines.push(`${iso} (${fmtDate(iso, {weekday: "long"})}${i === 0 ? ", HOY" : ""}): ${workLabel(w)} → entreno sugerido en ${placeFor(iso) === "home" ? "casa" : "gimnasio"}`); }
+  return lines.join("\n");
+}
+
+function calStale(h) { return !S.cal?.syncedAt || Date.now() - new Date(S.cal.syncedAt).getTime() > h * 3600e3; }
+function autoPlace() { if (S.placeTouched) return; const p = placeFor(S.date); if (p !== S.place) { S.place = p; S.dayIdx = null; S.draft = null; } }
+let autoSyncTried = false;
+async function maybeAutoSync() {
+  if (autoSyncTried || !S.mcp || !calStale(6)) return; autoSyncTried = true;
+  /* Solo se sincroniza sola si ya diste permiso a Google Calendar; si no, espera a que pulses «Sincronizar». */
+  try { const perms = await claude.use("permissions"); const st = perms ? await perms.state("mcp:" + CAL_SERVER) : null; if (st === "granted") syncCalendar(false); } catch {}
+}
+
 /* ---------- vista: progreso ---------- */
 const bmi = w => { const h = (S.profile?.height || 169) / 100; return w / (h * h); };
 function viewProg() {
@@ -623,7 +781,7 @@ function viewProg() {
   const names = []; S.logs.forEach(l => (l.entries || []).forEach(e => { if (!e.cardio && (e.sets || []).some(s => +s.kg > 0) && !names.includes(e.n)) names.push(e.n); }));
   if (!S.exSel || !names.includes(S.exSel)) S.exSel = names[0] || null;
   let exSec;
-  if (!names.length) exSec = `<div class="empty">Cuando guardes tu primera sesión en <b>Registrar</b>, aquí verás la evolución de cada ejercicio: carga máxima, 1RM estimado y volumen.</div>`;
+  if (!names.length) exSec = `<div class="empty">Cuando guardes tu primera sesión en <b>Hoy</b>, aquí verás la evolución de cada ejercicio: carga máxima, 1RM estimado y volumen.</div>`;
   else {
     const rows = [...S.logs].reverse().map(l => ({l, e: (l.entries || []).find(e => e.n === S.exSel)})).filter(r => r.e);
     const val = e => { const ss = e.sets.filter(s => +s.kg > 0 && +s.reps > 0);
@@ -706,6 +864,9 @@ ${plan("home") || "Sin definir."}
 ÚLTIMAS SESIONES REGISTRADAS (más reciente primero):
 ${logs || "Aún no hay sesiones registradas en la app."}
 
+HORARIO DE TRABAJO (de su Google Calendar o marcado a mano; teletrabajo = entrena en casa con la rutina de casa):
+${scheduleContext() || "Sin datos de horario."}
+
 NUTRICIÓN Y PASOS DIARIOS (Samsung Health o manual, últimos 14 días):
 ${daily || "Sin datos."}`;
 }
@@ -715,7 +876,8 @@ function rules() {
 - Basa cada consejo en sus datos reales (abajo). Cita cifras concretas: kg, reps, fechas, % de grasa, kcal.
 - Progresión: usa doble progresión (cuando completa todas las series en el tope de reps con buena técnica, sube la carga el mínimo posible: 1-2,5 kg en máquinas y mancuernas). Ten en cuenta la sensación registrada (Fácil, Bien, Duro, Al fallo) y la energía.
 - Adapta el enfoque a su fase actual: en déficit o recomposición, mantener fuerza y masa muscular con proteína alta; en mantenimiento, rendimiento y progresión estable; en superávit, ganar músculo minimizando la grasa. Si te pide objetivos para una fase nueva, propón kcal y gramos de proteína, grasa e hidratos justificados con su peso y actividad.
-- Ten en cuenta sus notas generales (fatiga, horarios, molestias).
+- Ten en cuenta sus notas generales (fatiga, horarios, molestias): son información que quiere que recuerdes siempre.
+- Ten en cuenta su horario de trabajo: en semanas de tarde suele entrenar por la mañana y en semanas de mañana por la tarde; los días de teletrabajo entrena en casa con la rutina de casa. Ajusta volumen, horario de comidas y descanso a su turno.
 - En nutrición da ejemplos prácticos con comida española habitual y cantidades aproximadas.
 - Si menciona dolor, lesión, mareo u otro síntoma médico, recomienda parar y consultar con un profesional sanitario; no diagnostiques.
 - Sé breve: 4-10 líneas salvo que pida un plan detallado. Usa listas cortas con guiones y **negrita** solo para lo clave. No uses tablas.
@@ -941,8 +1103,8 @@ async function saveProfile(p) { try { await S.db.doc("profile/main").set(p); } c
 document.addEventListener("click", async ev => {
   const b = ev.target.closest("button"); if (!b) return;
   const ds = b.dataset;
-  if (ds.tab) { S.tab = ds.tab; lsSet("rc.tab", S.tab); S.confirmDel = null; render(); scrollTo(0, 0); return; }
-  if (ds.place) { S.place = ds.place; S.dayIdx = null; S.draft = null; render(); return; }
+  if (ds.tab) { S.tab = ds.tab; lsSet("rc.tab", S.tab); S.confirmDel = null; render(); scrollTo(0, 0); if (S.tab === "cal" && S.calLoaded && calStale(3)) syncCalendar(false); return; }
+  if (ds.place) { S.placeTouched = true; S.place = ds.place; S.dayIdx = null; S.draft = null; render(); return; }
   if (ds.day != null) { S.dayIdx = +ds.day; S.draft = null; try { localStorage.removeItem("rc.draft"); } catch {} render(); return; }
   if (ds.step) {
     const i = +ds.i, e = S.draft.entries[i], d = +ds.d;
@@ -971,6 +1133,7 @@ document.addEventListener("click", async ev => {
   if (ds.saveday != null) { const plan = JSON.parse(JSON.stringify(S.plans[S.rPlace])); plan.days[+ds.saveday].name = $("#dn").value.trim() || plan.days[+ds.saveday].name; S.editDay = null; await savePlan(S.rPlace, plan); return; }
   if (ds.delday != null) { const plan = JSON.parse(JSON.stringify(S.plans[S.rPlace])); plan.days.splice(+ds.delday, 1); S.editDay = null; S.confirmDel = null; await savePlan(S.rPlace, plan); return; }
   if (ds.addex != null) { const plan = JSON.parse(JSON.stringify(S.plans[S.rPlace])); const day = plan.days[+ds.addex]; day.ex.splice(Math.max(0, day.ex.length - (isCardio(day.ex[day.ex.length - 1]?.n || "") ? 1 : 0)), 0, {n: "Nuevo ejercicio", t: "3 series (10-10-10)", last: "—", note: "", tip: "", prog: "Mantener"}); S.editing = `${+ds.addex}-${day.ex.findIndex(x => x.n === "Nuevo ejercicio")}`; await savePlan(S.rPlace, plan); return; }
+  if (ds.calday) { S.calSel = ds.calday; render(); return; }
   if (ds.nut) { S.nutMetric = ds.nut; render(); return; }
   if (ds.metric) { S.metric = ds.metric; render(); return; }
   if (ds.source) { S.source = ds.source; render(); return; }
@@ -1017,6 +1180,21 @@ document.addEventListener("click", async ev => {
     if (w == null) { toast("Introduce al menos el peso."); return; }
     try { await S.db.collection("body").add({date: $("#b-date").value || todayISO(), weight: w, fat: f, muscle: m, source: $("#b-s").value, note: $("#b-n").value.trim()}); toast("Medición guardada"); } catch { toast("No se pudo guardar la medición."); }
     return;
+  }
+  if (a === "calSync") return syncCalendar(true);
+  if (a === "calChoose") return loadCalendars();
+  if (a === "calCancelList") { S.calList = null; render(); return; }
+  if (a === "calSaveList") {
+    const picked = [...document.querySelectorAll("[data-calpick]")].filter(x => x.checked).map(x => x.dataset.calpick);
+    const nm = Object.fromEntries((S.calList || []).map(c => [c.id, c.name]));
+    S.cal = {...(S.cal || {}), calendars: picked, calNames: nm}; S.calList = null;
+    await syncCalendar(true); return;
+  }
+  if (a === "calSaveDay") { const k = $("#cal-ov").value; await saveOverrides({[S.calSel]: k === "auto" ? null : ovValue[k]}); return; }
+  if (a === "calSaveWeek") {
+    const k = $("#cal-ov").value, mon = isoAdd(S.calSel, -((wdOf(S.calSel) + 6) % 7)), upd = {};
+    for (let i = 0; i < 5; i++) upd[isoAdd(mon, i)] = k === "auto" ? null : ovValue[k];
+    await saveOverrides(upd); return;
   }
   if (a === "exportDrive") return exportToDrive();
   if (a === "exportZip") return exportZip();
@@ -1087,6 +1265,8 @@ if (!HOSTED && "serviceWorker" in navigator && location.protocol === "https:") a
   if (!db) { render(); return; }
   const err = () => {};
   db.collection("videos").onSnapshot(s => { S.videos = {}; s.docs.forEach(d => S.videos[d.id] = d.data()); soon(); }, err);
+  db.doc("calendar/main").onSnapshot(s => { S.cal = s.exists ? s.data() : null; S.calLoaded = true; autoPlace(); soon(); maybeAutoSync(); }, err);
+  db.doc("calendar/overrides").onSnapshot(s => { S.calOv = s.exists ? (s.data().days || {}) : {}; autoPlace(); soon(); }, err);
   db.collection("daily").orderBy("date", "desc").limit(400).onSnapshot(s => { S.daily = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); }, err);
   db.collection("plan").onSnapshot(s => { S.plans = {}; s.docs.forEach(d => S.plans[d.id] = d.data()); soon(); }, err);
   db.doc("profile/main").onSnapshot(s => { S.profile = s.exists ? s.data() : null; S.profileLoaded = true; soon(); }, err);

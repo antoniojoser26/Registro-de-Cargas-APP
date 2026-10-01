@@ -14,6 +14,7 @@ Cómo está construida **Registro de Cargas**, qué guarda y, sobre todo, **qué
 | Entrenador IA | Claude, con la cuenta del usuario | API de Anthropic con la clave del usuario |
 | Vídeos | Enlace, Google Drive o archivo subido | Solo enlace |
 | Exportar registros | A una carpeta de Google Drive | ZIP descargado |
+| Calendario de turnos | Google Calendar + ajustes manuales | Solo ajustes manuales |
 | Copia de seguridad | Importar | Exportar e importar |
 
 En modo independiente, la capa de almacenamiento imita la misma interfaz (`collection`, `doc`, `set`, `onSnapshot`…). El resto del código es idéntico en los dos modos.
@@ -31,6 +32,8 @@ Los datos son documentos JSON organizados por colecciones:
 | `daily/<AAAA-MM-DD>` | Un día de nutrición y actividad: `steps`, `kcal`, `protein`, `fat`, `carbs`, `source` |
 | `videos/<nombre-normalizado>` | Vídeos de un ejercicio: `n`, `items[]` → `{id, kind, label, url, fileId, asset, title, addedAt}` |
 | `chat/main` | Últimos 40 mensajes del entrenador |
+| `calendar/main` | Última sincronización con Google Calendar: `syncedAt`, `calendars[]`, `calNames`, `from`, `to`, `days` → `{AAAA-MM-DD: {shift: "M"/"T"/null, tele, off, titles[]}}` |
+| `calendar/overrides` | Ajustes manuales por día: `days` → `{AAAA-MM-DD: {shift, tele, off}}`. Se conservan los de los últimos 60 días en adelante. |
 
 **Campos de un ejercicio del plan:**
 
@@ -122,10 +125,22 @@ El **nombre del día** se copia en cada sesión al guardarla. Renombrar un día 
 En cada pregunta se envía:
 
 1. Las instrucciones del entrenador.
-2. Un resumen con: fecha y día que toca, perfil, objetivos, descansos, notas, recordatorios, mediciones, las dos rutinas completas, las **últimas 15 sesiones** y los **últimos 14 días** de nutrición.
+2. Un resumen con: fecha y día que toca, perfil, objetivos, descansos, notas, recordatorios, mediciones, las dos rutinas completas, las **últimas 15 sesiones**, el **horario de trabajo** de 3 días atrás a 13 días adelante y los **últimos 14 días** de nutrición.
 3. Los **últimos 20 mensajes** de la conversación.
 
 El entrenador no tiene más memoria que esa. Se guardan los últimos 40 mensajes.
+
+### 3.8 Calendario de turnos
+
+| Paso | Regla |
+|---|---|
+| Qué eventos cuentan | Título con «tarde» → turno **T**; «mañana» → turno **M**; si no, un código `M1`, `T2`… (letra M o T seguida de un número). «teletrabajo», «remoto», «home office» o «desde casa» → **teletrabajo**. «vacaciones», «día libre», «libranza», «festivo» o «baja» → **libre**. Los demás eventos se ignoran. |
+| Qué días cubre un evento | De día completo: del inicio al día anterior a su fin. Con hora: del día de inicio al día en que termina, salvo que termine a las 00:00. |
+| Rango leído | De 14 días atrás a 42 días adelante, en los calendarios elegidos (por defecto, el principal). |
+| Ajuste manual | Sustituye por completo al dato de Google Calendar en ese día. «Automático» lo quita. |
+| Efecto en **Hoy** | Si hoy es teletrabajo, el lugar propuesto es **Casa**; si no, **Gimnasio**. Elegir el lugar a mano manda sobre la propuesta. |
+| Efecto en el entrenador | Recibe el turno y el lugar sugerido de cada día con datos, de 3 días atrás a 13 adelante. |
+| Día de rutina | No cambia: sigue dependiendo del día de la semana (lunes = día 1…). El calendario solo decide gimnasio o casa. |
 
 ## 4. Formatos de exportación
 

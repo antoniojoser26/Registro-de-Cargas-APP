@@ -28,10 +28,11 @@ ejemplos/               Copia de seguridad de ejemplo
 
 ## Qué hace
 
-- **Registrar.** Te propone el día de rutina que toca según el día de la semana (lunes = Día 1 … viernes = Día 5). Cada ejercicio viene rellenado con tus series, repeticiones y el peso de la última vez. Apuntas sensaciones por ejercicio (Fácil, Bien, Duro, Al fallo), la energía del día y notas.
+- **Hoy (registrar).** Te propone el día de rutina que toca según el día de la semana (lunes = Día 1 … viernes = Día 5). Cada ejercicio viene rellenado con tus series, repeticiones y el peso de la última vez. Apuntas sensaciones por ejercicio (Fácil, Bien, Duro, Al fallo), la energía del día y notas.
 - **Progresión automática.** Si completas todas las repeticiones objetivo con sensación Fácil o Bien, el ejercicio se marca como «Subir peso» (doble progresión).
 - **Rutinas.** Dos planes, gimnasio y casa. Puedes crear días y ejercicios y editarlos.
 - **Vídeos.** Cada ejercicio admite enlaces a tus vídeos de técnica (Google Fotos, Drive, YouTube…).
+- **Agenda.** Calendario de turnos de trabajo (mañana, tarde, teletrabajo, libre). Los días de teletrabajo propone entrenar en casa, y el entrenador adapta sus consejos a tu turno. En la versión de GitHub los turnos se marcan a mano.
 - **Progreso.**
   - Peso, % de grasa, masa muscular e IMC, con filtro por fuente de medición.
   - Gráficas por ejercicio: carga máxima, 1RM estimado (Epley) y volumen.

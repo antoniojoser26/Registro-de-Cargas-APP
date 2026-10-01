@@ -2,7 +2,7 @@
 
 Guía completa de **Registro de Cargas**, pantalla por pantalla.
 
-La app tiene seis pestañas, en la barra inferior: **Registrar**, **Rutinas**, **Vídeos**, **Progreso**, **Entrenador** y **Perfil**.
+La app tiene siete pestañas, en la barra inferior: **Hoy** (registrar la sesión), **Rutinas**, **Vídeos**, **Agenda** (calendario de turnos), **Progreso**, **Coach** (el entrenador) y **Perfil**.
 
 ## 1. Primeros pasos
 
@@ -17,7 +17,7 @@ La app tiene seis pestañas, en la barra inferior: **Registrar**, **Rutinas**, *
 
 ## 2. Registrar una sesión
 
-1. Elige **Gimnasio** o **Casa** arriba a la derecha.
+1. Elige **Gimnasio** o **Casa** arriba a la derecha. Si en la **Agenda** hoy es día de teletrabajo, la app ya propone **Casa**; debajo verás tu turno de hoy.
 2. La app marca con **toca hoy** el día que corresponde a hoy y lo deja seleccionado. En fin de semana no marca ninguno; elige el día a mano si entrenas.
 3. Cada ejercicio aparece rellenado:
     - **Series y repeticiones**: las del objetivo del plan. El número gris dentro de la casilla de reps es el objetivo de esa serie.
@@ -53,11 +53,28 @@ Formas de añadir un vídeo:
 - **Desde Drive** (solo dentro de Claude): busca los vídeos de tu carpeta de Drive y eliges cuál corresponde al ejercicio.
 - **Subir archivo** (solo dentro de Claude): MP4 o WebM de hasta 20 MB. Se reproduce dentro de la app.
 
-Los vídeos aparecen también en **Registrar**, bajo cada ejercicio, para consultarlos mientras entrenas.
+Los vídeos aparecen también en **Hoy**, bajo cada ejercicio, para consultarlos mientras entrenas.
 
 Si el gimnasio y la casa tienen un ejercicio con el mismo nombre, comparten vídeos.
 
-## 5. Progreso
+## 5. Calendario (Agenda)
+
+La pestaña **Agenda** muestra cinco semanas (la anterior, la actual y tres más) con tu turno de trabajo, los días de teletrabajo y el día de rutina que toca.
+
+- **Leyenda**:
+    - **M**: turno de mañana. **T**: turno de tarde.
+    - **Casa**: teletrabajo. Ese día la app propone entrenar en casa con la rutina de casa.
+    - **L**: día libre.
+    - **D1, D2…**: día de rutina que toca. **✓**: ya registraste una sesión ese día.
+- **Sincronizar con Google Calendar** (solo dentro de Claude):
+    - La app lee los eventos de tu calendario cuyo título incluye «mañana», «tarde», un código de turno como **M1** o **T2**, «teletrabajo», o «vacaciones», «día libre» o «festivo».
+    - Sirven eventos de día completo y eventos con hora que abarcan varios días, como «Semana de tarde» de lunes a viernes.
+    - **Elegir calendarios** permite leer también otros calendarios tuyos.
+    - Se sincroniza sola al abrir la app (si ya diste permiso y han pasado más de 6 horas) y al abrir la Agenda (si han pasado más de 3).
+- **Corregir un día**: toca el día, elige el turno correcto y pulsa **Guardar día**. **Aplicar de lunes a viernes** lo aplica a toda esa semana. Vuelve a **Automático** para quitar el ajuste.
+- **Versión de GitHub**: no se conecta a Google Calendar. Marca los turnos a mano con **Corregir este día** y **Aplicar de lunes a viernes**.
+
+## 6. Progreso
 
 ### Composición corporal
 
@@ -87,15 +104,19 @@ Si el gimnasio y la casa tienen un ejercicio con el mismo nombre, comparten víd
 
 Muestra el historial completo. Toca una sesión para ver el detalle o borrarla.
 
-## 6. Entrenador
+## 7. Entrenador
 
 - Escribe una pregunta o usa una de las sugerencias.
-- El entrenador recibe en cada pregunta tus datos actuales: perfil, fase, objetivos, notas, rutinas, últimas sesiones, mediciones y nutrición.
+- El entrenador recibe en cada pregunta tus datos actuales: perfil, fase, objetivos, notas, rutinas, últimas sesiones, mediciones, nutrición y tu horario de trabajo de las próximas dos semanas.
+- **Qué recuerda**:
+    - **Notas generales del Perfil**: siempre, hasta que las quites. Es el sitio para lo que debe tener en cuenta a largo plazo (una lesión, una época de mucho trabajo).
+    - **Sensaciones y energía de cada sesión**: mientras esa sesión esté entre las 15 últimas.
+    - **Lo que le dices en el chat**: solo mientras siga entre los últimos 20 mensajes, y se borra con **Nueva conversación**.
 - **Parar** corta una respuesta larga.
 - **Nueva conversación** borra el historial del chat. Tus datos no se tocan.
 - No sustituye a un profesional sanitario. Ante dolor o síntomas, para y consulta.
 
-## 7. Perfil
+## 8. Perfil
 
 - **Editar datos y fase**: nombre, altura, fase (recomposición, definición, mantenimiento, volumen), gimnasio, entrenador y material de casa. Al cambiar de fase se abren los objetivos de nutrición para que los revises.
 - **Objetivos de nutrición**:
@@ -109,7 +130,7 @@ Muestra el historial completo. Toca una sesión para ver el detalle o borrarla.
 - **Exportar registros**: CSV de todo tu historial. Dentro de Claude va a tu carpeta de Drive; en la versión independiente se descarga un ZIP.
 - **Copia de seguridad** (JSON): exportar e importar todos los datos.
 
-## 8. Instalar en el móvil
+## 9. Instalar en el móvil
 
 ### Versión de GitHub (se instala como una app)
 
@@ -125,7 +146,7 @@ Abre la app desde la app de Claude, o abre su enlace en Chrome con tu cuenta de 
 
 Las dos versiones guardan sus datos por separado. Para pasar tus datos de una a otra, usa la copia de seguridad (JSON).
 
-## 9. Preguntas frecuentes
+## 10. Preguntas frecuentes
 
 **No me marca el día que toca.** Comprueba que tu rutina tiene al menos tantos días como el día de la semana actual. Un jueves necesita un día 4.
 
