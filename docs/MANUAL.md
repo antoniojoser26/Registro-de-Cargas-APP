@@ -62,12 +62,12 @@ Si el gimnasio y la casa tienen un ejercicio con el mismo nombre, comparten víd
 
 ## 5. Calendario (Agenda)
 
-La pestaña **Agenda** muestra cinco semanas (la anterior, la actual y tres más) con tu turno de trabajo, los días de teletrabajo, los pesajes y el día de rutina que toca.
+La pestaña **Agenda** muestra el mes completo, de lunes a domingo, con tu turno de trabajo, los días de teletrabajo, las vacaciones, los pesajes y el día de rutina que toca. Con **‹** y **›** pasas de mes para planificar con antelación; **Hoy** vuelve al mes actual. Al cambiar de mes, la app lee de Google Calendar los días que aún no tenía.
 
 - **Leyenda**:
     - **M1, M2…** (azul): turno de mañana. **T1…** (naranja): turno de tarde. Si el evento no lleva código, aparece solo **M** o **T**.
     - **Casa**: teletrabajo. Ese día la app propone entrenar en casa con la rutina de casa.
-    - **L**: día libre.
+    - **Vac.** (morado): vacaciones. **L**: día libre.
     - **Pes.**: pesaje (revisión de composición corporal).
     - **D1, D2…**: día de rutina que toca. **✓**: ya registraste una sesión ese día.
 - **Sincronizar con Google Calendar** (solo dentro de Claude):
@@ -77,6 +77,7 @@ La pestaña **Agenda** muestra cinco semanas (la anterior, la actual y tres más
     - **Elegir calendarios** permite leer también otros calendarios tuyos.
     - Se sincroniza sola al abrir la app (si ya diste permiso y han pasado más de 6 horas) y al abrir la Agenda (si han pasado más de 3).
 - **Corregir un día**: toca el día, elige el turno correcto y pulsa **Guardar día**. **Aplicar de lunes a viernes** lo aplica a toda esa semana. Vuelve a **Automático** para quitar el ajuste.
+- **Aplicar a un rango de fechas**: elige «Desde», «Hasta» y qué marcar (un turno, teletrabajo, **Vacaciones** o libre). Con «Solo de lunes a viernes» se saltan los fines de semana. Sirve para meter de una vez tus vacaciones o varias semanas del mismo turno (hasta dos meses por vez).
 - **Añadir también a Google Calendar** (solo dentro de Claude): con esta casilla marcada, al guardar un día o una semana la app crea en tu calendario principal un evento por día con el horario del turno (por ejemplo «Turno de mañana M1», de 08:00 a 17:00; «Teletrabajo · Turno de mañana M2»; «Día libre»). Si después cambias o quitas ese ajuste, la app borra el evento que creó ella y, si toca, crea el nuevo. Nunca borra eventos que hayas creado tú.
 - **Tus turnos** (al final de la Agenda): define cada código con su horario, por ejemplo **M1** de 08:00 a 17:00. Con eso la app y el entrenador saben a qué hora trabajas cada día. **Turno por defecto en teletrabajo** se aplica cuando un día de teletrabajo no lleva código.
 - **Versión de GitHub**: no se conecta a Google Calendar. Marca los turnos a mano con **Corregir este día** y **Aplicar de lunes a viernes**.
