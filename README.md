@@ -32,8 +32,9 @@ ejemplos/               Copia de seguridad de ejemplo
 - **Progresión automática.** Si completas todas las repeticiones objetivo con sensación Fácil o Bien, el ejercicio se marca como «Subir peso» (doble progresión).
 - **Rutinas.** Dos planes, gimnasio y casa. Puedes crear días y ejercicios y editarlos.
 - **Vídeos.** Cada ejercicio admite enlaces a tus vídeos de técnica (Google Fotos, Drive, YouTube…).
-- **Agenda.** Calendario de turnos de trabajo (mañana, tarde, teletrabajo, libre). Los días de teletrabajo propone entrenar en casa, y el entrenador adapta sus consejos a tu turno. En la versión de GitHub los turnos se marcan a mano.
+- **Agenda.** Calendario de turnos de trabajo (con código y horario de cada turno: M1, T1…), teletrabajo, días libres y pesajes. Los días de teletrabajo propone entrenar en casa, y el entrenador adapta sus consejos a tu turno. En la versión de GitHub los turnos se marcan a mano.
 - **Progreso.**
+  - Objetivos de peso, % de grasa y masa muscular, con progreso, ritmo mensual y fecha estimada.
   - Peso, % de grasa, masa muscular e IMC, con filtro por fuente de medición.
   - Gráficas por ejercicio: carga máxima, 1RM estimado (Epley) y volumen.
   - Historial de sesiones.

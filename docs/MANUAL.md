@@ -59,22 +59,36 @@ Si el gimnasio y la casa tienen un ejercicio con el mismo nombre, comparten víd
 
 ## 5. Calendario (Agenda)
 
-La pestaña **Agenda** muestra cinco semanas (la anterior, la actual y tres más) con tu turno de trabajo, los días de teletrabajo y el día de rutina que toca.
+La pestaña **Agenda** muestra cinco semanas (la anterior, la actual y tres más) con tu turno de trabajo, los días de teletrabajo, los pesajes y el día de rutina que toca.
 
 - **Leyenda**:
-    - **M**: turno de mañana. **T**: turno de tarde.
+    - **M1, M2…** (azul): turno de mañana. **T1…** (naranja): turno de tarde. Si el evento no lleva código, aparece solo **M** o **T**.
     - **Casa**: teletrabajo. Ese día la app propone entrenar en casa con la rutina de casa.
     - **L**: día libre.
+    - **Pes.**: pesaje (revisión de composición corporal).
     - **D1, D2…**: día de rutina que toca. **✓**: ya registraste una sesión ese día.
 - **Sincronizar con Google Calendar** (solo dentro de Claude):
-    - La app lee los eventos de tu calendario cuyo título incluye «mañana», «tarde», un código de turno como **M1** o **T2**, «teletrabajo», o «vacaciones», «día libre» o «festivo».
+    - La app lee los eventos de tu calendario cuyo título incluye «mañana», «tarde», un código de turno como **M1** o **T1**, «teletrabajo», «vacaciones», «día libre» o «festivo».
+    - También lee los **pesajes**: eventos cuyo título incluye «pesaje», «EVOLT», «báscula» o «composición corporal». Ese día, **Hoy** te recuerda apuntar la medición, y **Progreso** muestra cuántos días faltan para el próximo.
     - Sirven eventos de día completo y eventos con hora que abarcan varios días, como «Semana de tarde» de lunes a viernes.
     - **Elegir calendarios** permite leer también otros calendarios tuyos.
     - Se sincroniza sola al abrir la app (si ya diste permiso y han pasado más de 6 horas) y al abrir la Agenda (si han pasado más de 3).
 - **Corregir un día**: toca el día, elige el turno correcto y pulsa **Guardar día**. **Aplicar de lunes a viernes** lo aplica a toda esa semana. Vuelve a **Automático** para quitar el ajuste.
+- **Tus turnos** (al final de la Agenda): define cada código con su horario, por ejemplo **M1** de 08:00 a 17:00. Con eso la app y el entrenador saben a qué hora trabajas cada día. **Turno por defecto en teletrabajo** se aplica cuando un día de teletrabajo no lleva código.
 - **Versión de GitHub**: no se conecta a Google Calendar. Marca los turnos a mano con **Corregir este día** y **Aplicar de lunes a viernes**.
 
 ## 6. Progreso
+
+### Objetivos
+
+- **Editar** permite fijar un objetivo de **peso**, de **% de grasa** y de **masa muscular**, una **fecha objetivo** opcional y la **fuente** con la que medir (por ejemplo, solo la báscula del gimnasio).
+- Al editar, la app calcula tu **masa magra** (peso sin grasa) y qué pesarías con distintos % de grasa si la mantienes. Sirve para fijar un peso objetivo coherente con el % de grasa.
+- Cada objetivo muestra:
+    - el valor actual, el objetivo y lo que falta;
+    - una barra con el % del camino recorrido desde tu primera medición;
+    - el **ritmo** de los últimos 120 días (por mes) y la **fecha estimada** a la que llegarías a ese ritmo;
+    - con fecha objetivo, el ritmo que necesitas y si vas **En ritmo** o **Por detrás**.
+- **Pedir propuesta al entrenador** le pide objetivos realistas con plazo a partir de tus mediciones.
 
 ### Composición corporal
 
@@ -107,7 +121,7 @@ Muestra el historial completo. Toca una sesión para ver el detalle o borrarla.
 ## 7. Entrenador
 
 - Escribe una pregunta o usa una de las sugerencias.
-- El entrenador recibe en cada pregunta tus datos actuales: perfil, fase, objetivos, notas, rutinas, últimas sesiones, mediciones, nutrición y tu horario de trabajo de las próximas dos semanas.
+- El entrenador recibe en cada pregunta tus datos actuales: perfil, fase, objetivos de nutrición y de composición corporal, notas, rutinas, últimas sesiones, mediciones, nutrición, tu horario de trabajo de las próximas dos semanas (con el horario de cada turno) y la fecha del próximo pesaje.
 - **Qué recuerda**:
     - **Notas generales del Perfil**: siempre, hasta que las quites. Es el sitio para lo que debe tener en cuenta a largo plazo (una lesión, una época de mucho trabajo).
     - **Sensaciones y energía de cada sesión**: mientras esa sesión esté entre las 15 últimas.

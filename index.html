@@ -175,6 +175,13 @@ i.sh.M{background:var(--accent-soft);color:var(--accent)}
 i.sh.T{background:var(--warn-soft);color:var(--warn)}
 i.sh.tele{background:var(--good-soft);color:var(--good)}
 i.sh.off{background:var(--sunk);color:var(--muted)}
+i.sh.weigh{background:var(--red-soft);color:var(--plate-red)}
+i.sh.N{background:var(--sunk);color:var(--ink)}
+.shrow{display:grid;grid-template-columns:58px minmax(0,1fr) auto minmax(0,1fr) 28px;gap:6px;align-items:center}
+.shrow .input{padding-inline:6px;min-width:0}
+.goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.kpi.goal .v{font-size:28px}
+.kpi.goal .gt{font-family:var(--f-body);font-size:14px;color:var(--muted);font-weight:600}
 .vex{border-top:1px solid var(--line);padding-block:12px;display:flex;flex-direction:column;gap:6px}
 .vex:first-of-type{border-top:0}
 .vitem{background:var(--sunk);border-radius:8px;padding:8px 10px}
@@ -242,7 +249,7 @@ const S = {
   busy: false, ctl: null, confirmClear: false, confirmDel: null,
   mcp: null, assets: null, videos: {}, vPlace: "gym", vAdd: null, vMode: "drive", driveFiles: null, driveState: "idle", driveErr: "", uploading: false,
   daily: [], nutMetric: "kcal", importing: "",
-  editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, exporting: "", exportBusy: false,
+  editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, exporting: "", exportBusy: false,
   apiKey: lsGet("rc.apikey") || "", apiModel: lsGet("rc.model") || ""
 };
 
@@ -325,7 +332,7 @@ function viewLog() {
   if (!plan || !plan.days.length) return head + `<div class="empty">${plan ? "Esta rutina aún no tiene días. Créalos en la pestaña <b>Rutinas</b>." : S.profileLoaded && !S.profile ? "Empieza creando tu perfil en la pestaña <b>Perfil</b>." : "Aquí aparecerán los días de tu rutina en cuanto se carguen."}</div>`;
   ensureDraft();
   const wk = workDay(S.date);
-  const workNote = wk ? `<p class="small" style="margin-bottom:8px"><b>Hoy:</b> ${esc(workLabel(wk))}${wk.tele ? " → te propongo entrenar en casa." : ""}</p>` : "";
+  const workNote = wk ? `<p class="small" style="margin-bottom:8px"><b>Hoy:</b> ${esc(workLabel(wk))}${wk.tele ? " → te propongo entrenar en casa." : ""}${wk.weigh ? " Cuando tengas los datos del pesaje, apúntalos en <b>Progreso → Añadir medición</b>." : ""}</p>` : "";
   const next = weekdayIdx(S.place, S.date);
   const rest = next == null ? `<p class="small muted">Hoy es fin de semana: no toca ningún día del plan. Si entrenas igualmente, elige el día abajo.</p>` : "";
   const days = workNote + rest + `<div class="daypick" role="group" aria-label="Día">${plan.days.map((d, i) => {
@@ -610,14 +617,16 @@ const CAL_SERVER = "Google Calendar";
 const TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Madrid"; } catch { return "Europe/Madrid"; } })();
 const isoAdd = (iso, n) => { const [y, m, d] = iso.split("-").map(Number); const x = new Date(y, m - 1, d + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
 const wdOf = iso => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).getDay(); };
-/* Un evento cuenta si su título habla de turno (mañana/tarde o códigos M1, T2…), teletrabajo o día libre. */
+/* Un evento cuenta si su título habla de turno (mañana/tarde/noche o códigos M1, T2…), teletrabajo, día libre o pesaje. */
 function classifyEvent(title) {
   const t = String(title || "");
+  if (/pesaje|evolt|b[aá]scula|composici[oó]n corporal/i.test(t)) return {weigh: true};
   const tele = /teletrabajo|teletrabaj|remoto|home ?office|desde casa/i.test(t);
   const off = /vacaciones|d[ií]a libre|libranza|festivo|\bbaja\b/i.test(t);
-  let shift = /\btarde\b/i.test(t) ? "T" : /\bma[ñn]ana\b/i.test(t) ? "M" : null;
-  if (!shift) { const m = t.match(/\b([MT])\d\b/); if (m) shift = m[1]; }
-  return tele || off || shift ? {shift, tele, off} : null;
+  const cm = t.match(/\b([MTN])(\d{1,2})\b/); let code = cm ? cm[1] + cm[2] : null;
+  const shift = /\btarde\b/i.test(t) ? "T" : /\bma[ñn]ana\b/i.test(t) ? "M" : /\bnoche\b/i.test(t) ? "N" : code ? code[0] : null;
+  if (code && shift && code[0] !== shift) code = null; // el código contradice la palabra: se ignora el código
+  return tele || off || shift ? {shift, code, tele, off} : null;
 }
 /* Días que cubre un evento: los de día completo terminan el día anterior al «end»; los de hora incluyen el día en que acaban (salvo a las 00:00). */
 function eventDays(ev) {
@@ -634,33 +643,60 @@ function buildCalDays(events) {
   for (const ev of events) {
     if (!ev || ev.status === "cancelled") continue; const c = classifyEvent(ev.summary); if (!c) continue;
     for (const d of eventDays(ev)) {
-      const o = days[d] ||= {shift: null, tele: false, off: false, titles: []};
-      if (c.shift) o.shift = c.shift; o.tele = o.tele || c.tele; o.off = o.off || c.off;
+      const o = days[d] ||= {shift: null, code: null, tele: false, off: false, weigh: false, titles: []};
+      if (c.weigh) o.weigh = true;
+      else { if (c.shift) { o.code = c.code || (o.shift === c.shift ? o.code : null); o.shift = c.shift; } o.tele = o.tele || c.tele; o.off = o.off || c.off; }
       const tt = String(ev.summary || "").trim(); if (tt && !o.titles.includes(tt) && o.titles.length < 4) o.titles.push(tt);
     }
   }
   return days;
 }
+/* Turnos definidos por el usuario: código, tipo (M/T/N por la primera letra) y horario. */
+const shiftCfg = () => S.profile?.shifts || {list: [], teleDefault: ""};
+const shiftDef = code => (shiftCfg().list || []).find(s => s.code === code) || null;
+const shiftHours = code => { const d = shiftDef(code); return d && d.start && d.end ? `${d.start}–${d.end}` : ""; };
 function workDay(iso) {
   const auto = S.cal?.days?.[iso] || null, ov = S.calOv?.[iso];
-  return ov ? {titles: [], ...(auto || {}), ...ov, manual: true} : auto;
+  const w = ov ? {titles: [], ...(auto || {}), ...ov, manual: true} : auto ? {...auto} : null;
+  if (!w) return null;
+  if (w.tele && !w.code && !w.off) { const d = shiftCfg().teleDefault; if (d && (!w.shift || w.shift === d[0])) { w.code = d; w.shift = d[0]; w.defaulted = true; } }
+  return w.shift || w.tele || w.off || w.weigh ? w : null;
 }
-function workLabel(w) {
+function workLabel(w, short) {
   if (!w) return "";
-  if (w.off) return "Libre";
-  return [w.shift === "M" ? "Turno de mañana" : w.shift === "T" ? "Turno de tarde" : "", w.tele ? "Teletrabajo" : w.shift ? "Presencial" : ""].filter(Boolean).join(" · ");
+  const parts = [];
+  if (w.off) parts.push("Libre");
+  else {
+    const kind = w.shift === "M" ? "mañana" : w.shift === "T" ? "tarde" : w.shift === "N" ? "noche" : "";
+    if (w.code) parts.push(`${w.code}${shiftHours(w.code) ? " (" + shiftHours(w.code) + ")" : ""}${short ? "" : kind ? " · turno de " + kind : ""}`);
+    else if (kind) parts.push("Turno de " + kind);
+    if (w.tele) parts.push("Teletrabajo"); else if (w.shift) parts.push("Presencial");
+  }
+  if (w.weigh) parts.push("Pesaje");
+  return parts.join(" · ");
 }
 const placeFor = iso => workDay(iso)?.tele ? "home" : "gym";
-const OV_OPTS = [["auto", "Automático (Google Calendar)"], ["M", "Mañana · presencial"], ["T", "Tarde · presencial"], ["TM", "Teletrabajo · mañana"], ["TT", "Teletrabajo · tarde"], ["TE", "Teletrabajo"], ["L", "Libre"]];
-const ovValue = {M: {shift: "M", tele: false, off: false}, T: {shift: "T", tele: false, off: false}, TM: {shift: "M", tele: true, off: false}, TT: {shift: "T", tele: true, off: false}, TE: {shift: null, tele: true, off: false}, L: {shift: null, tele: false, off: true}};
-const ovKey = o => !o ? "auto" : o.off ? "L" : o.tele ? (o.shift === "M" ? "TM" : o.shift === "T" ? "TT" : "TE") : o.shift || "auto";
+function ovOptions() {
+  const list = shiftCfg().list || [], o = [["auto", "Automático (Google Calendar)"]];
+  if (list.length) for (const s of list) { const h = s.start && s.end ? ` (${s.start}–${s.end})` : ""; o.push(["P:" + s.code, `${s.code}${h} · presencial`], ["R:" + s.code, `${s.code}${h} · teletrabajo`]); }
+  else o.push(["P:M", "Mañana · presencial"], ["P:T", "Tarde · presencial"], ["R:M", "Teletrabajo · mañana"], ["R:T", "Teletrabajo · tarde"]);
+  o.push(["R:", "Teletrabajo" + (shiftCfg().teleDefault ? ` (${shiftCfg().teleDefault} por defecto)` : "")], ["L", "Libre"]);
+  return o;
+}
+function ovValue(k) {
+  if (k === "auto") return null;
+  if (k === "L") return {shift: null, code: null, tele: false, off: true};
+  const [p, c] = k.split(":"); const code = c && c.length > 1 ? c : null;
+  return {shift: c ? c[0] : null, code, tele: p === "R", off: false};
+}
+const ovKey = o => !o ? "auto" : o.off ? "L" : (o.tele ? "R:" : "P:") + (o.code || o.shift || "");
 function calErrMsg(e) {
   return {server_not_connected: "Google Calendar no está conectado. Añádelo en claude.ai → Ajustes → Conectores.", needs_reauth: "Vuelve a conectar Google Calendar en claude.ai → Ajustes → Conectores.", not_in_manifest: "No has dado permiso a esta app para leer tu Google Calendar.", selection_required: "Elige qué cuenta de Google Calendar usar en el aviso de Claude.", blocked_by_policy: "Tu organización bloquea Google Calendar aquí.", server_unavailable: "Google Calendar no responde ahora. Inténtalo en un momento.", tool_error: "Google Calendar devolvió un error: " + (e?.message || "")}[e?.code] || "No se pudo leer el calendario. Inténtalo de nuevo.";
 }
 async function syncCalendar(manual) {
   if (!S.mcp || !S.db || S.calBusy) return;
   S.calBusy = true; S.calErr = ""; if (manual || S.tab === "cal") render();
-  const from = isoAdd(todayISO(), -14), to = isoAdd(todayISO(), 42);
+  const from = isoAdd(todayISO(), -14), to = isoAdd(todayISO(), 60);
   const ids = S.cal?.calendars?.length ? S.cal.calendars : ["primary"];
   try {
     let events = [];
@@ -683,9 +719,13 @@ async function loadCalendars() {
   catch (e) { S.calList = null; S.calErr = calErrMsg(e); }
   render();
 }
+function nextWeigh(fromIso) {
+  const days = Object.keys(S.cal?.days || {}).filter(d => d >= (fromIso || todayISO()) && S.cal.days[d].weigh).sort();
+  return days[0] || null;
+}
 function viewCal() {
   const today = todayISO(); if (!S.calSel) S.calSel = today;
-  const head = `<div class="top"><div><div class="eyebrow">Turnos y teletrabajo</div><h1>Calendario</h1></div></div>`;
+  const head = `<div class="top"><div><div class="eyebrow">Turnos, teletrabajo y pesajes</div><h1>Calendario</h1></div></div>`;
   const names = S.cal?.calNames || {}, chosen = S.cal?.calendars?.length ? S.cal.calendars : ["primary"];
   const sync = S.mcp ? `<div class="panel stack" style="margin-bottom:14px">
       <div class="row between"><div style="min-width:0"><div class="eyebrow">Google Calendar</div><div class="small">${S.cal?.syncedAt ? "Sincronizado " + new Date(S.cal.syncedAt).toLocaleString("es-ES", {weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : "Aún sin sincronizar"} · ${chosen.map(id => id === "primary" ? "calendario principal" : esc(names[id] || "otro calendario")).join(", ")}</div></div>
@@ -693,47 +733,129 @@ function viewCal() {
       ${S.calErr ? `<p class="small" style="color:var(--plate-red)">${esc(S.calErr)}</p>` : ""}
       ${Array.isArray(S.calList) ? `<div class="stack" style="gap:6px">${S.calList.map(c => `<label class="row small" style="gap:8px"><input type="checkbox" data-calpick="${esc(c.id)}" ${chosen.includes(c.id) || (chosen[0] === "primary" && c.name === c.id && !c.id.includes("group.")) ? "checked" : ""}> ${esc(c.name)}</label>`).join("")}
         <div class="row"><button class="btn" data-act="calSaveList">Guardar selección</button><button class="btn ghost" data-act="calCancelList">Cancelar</button></div></div>` : S.calList === "loading" ? `<p class="small muted">Cargando tus calendarios…</p>` : ""}
-      <p class="small muted">Lee los eventos cuyo título incluye «mañana», «tarde», un código de turno (M1, T2…), «teletrabajo» o «vacaciones / día libre / festivo». Si un día no cuadra, corrígelo abajo.</p></div>`
+      <p class="small muted">Lee los eventos cuyo título incluye «mañana», «tarde», un código de turno (M1, T1…), «teletrabajo», «vacaciones / día libre / festivo» o «pesaje / EVOLT». Si un día no cuadra, corrígelo abajo.</p></div>`
     : `<div class="panel" style="margin-bottom:14px"><p class="small">${HOSTED ? "La conexión con Google Calendar solo funciona al abrir la app dentro de Claude." : "Marca tus turnos y días de teletrabajo tocando cada día. Puedes aplicar un turno a toda la semana de una vez."}</p></div>`;
-  // cuadrícula: semana anterior + 4 siguientes, de lunes a domingo
   const wd = wdOf(today), monday = isoAdd(today, -((wd + 6) % 7) - 7);
-  const logged = new Set(S.logs.map(l => l.date));
+  const logged = new Set(S.logs.map(l => l.date)), weighed = new Set(S.body.map(b => b.date));
   const cells = Array.from({length: 35}, (_, i) => {
     const iso = isoAdd(monday, i), w = workDay(iso), dIdx = weekdayIdx("gym", iso), pl = placeFor(iso);
     const plan = S.plans[pl], tr = dIdx != null && plan?.days?.[dIdx] && !w?.off ? `D${dIdx + 1}` : "";
     const dnum = +iso.slice(8), first = dnum === 1 || i === 0;
     return `<button class="cday${iso === today ? " today" : ""}${iso === S.calSel ? " sel" : ""}${iso < today ? " past" : ""}" data-calday="${iso}" aria-label="${fmtDate(iso, {weekday: "long", day: "numeric", month: "long"})}${w ? ": " + workLabel(w) : ""}">
       <span class="dn">${dnum}${first ? " " + fmtDate(iso, {month: "short"}).replace(".", "") : ""}</span>
-      <span class="tags">${w?.off ? `<i class="sh off">L</i>` : w?.shift ? `<i class="sh ${w.shift}">${w.shift}</i>` : ""}${w?.tele ? `<i class="sh tele">Casa</i>` : ""}</span>
+      <span class="tags">${w?.off ? `<i class="sh off">L</i>` : w?.shift ? `<i class="sh ${w.shift}">${esc(w.code || w.shift)}</i>` : ""}${w?.tele ? `<i class="sh tele">Casa</i>` : ""}${w?.weigh || weighed.has(iso) ? `<i class="sh weigh">Pes.</i>` : ""}</span>
       <span class="tr">${logged.has(iso) ? "✓ " : ""}${tr}</span></button>`;
   }).join("");
   const grid = `<div class="calgrid">${["L", "M", "X", "J", "V", "S", "D"].map(d => `<div class="cwh">${d}</div>`).join("")}${cells}</div>
-    <div class="row small muted" style="margin-top:8px;gap:12px"><span><i class="sh M">M</i> mañana</span><span><i class="sh T">T</i> tarde</span><span><i class="sh tele">Casa</i> teletrabajo</span><span><i class="sh off">L</i> libre</span><span>D1… día de rutina · ✓ entrenado</span></div>`;
-  // detalle del día elegido
+    <div class="row small muted" style="margin-top:8px;gap:12px"><span><i class="sh M">M1</i> mañana</span><span><i class="sh T">T1</i> tarde</span><span><i class="sh tele">Casa</i> teletrabajo</span><span><i class="sh off">L</i> libre</span><span><i class="sh weigh">Pes.</i> pesaje</span><span>D1… día de rutina · ✓ entrenado</span></div>`;
   const iso = S.calSel, w = workDay(iso), dIdx = weekdayIdx("gym", iso), pl = placeFor(iso), plan = S.plans[pl];
-  const sess = S.logs.filter(l => l.date === iso);
+  const sess = S.logs.filter(l => l.date === iso), meas = S.body.filter(b => b.date === iso);
   const detail = `<div class="panel stack" style="margin-top:14px">
     <div><div class="eyebrow">${fmtDate(iso, {weekday: "long", day: "numeric", month: "long"})}</div>
-      <div style="font-weight:600;margin-top:2px">${w ? esc(workLabel(w)) : "Sin turno marcado"}${w?.manual ? ' <span class="pill keep">ajuste manual</span>' : ""}</div>
+      <div style="font-weight:600;margin-top:2px">${w ? esc(workLabel(w)) : "Sin turno marcado"}${w?.manual ? ' <span class="pill keep">ajuste manual</span>' : ""}${w?.defaulted ? ' <span class="pill keep">turno de teletrabajo por defecto</span>' : ""}</div>
       ${(w?.titles || []).length ? `<div class="small muted">${w.titles.map(esc).join(" · ")}</div>` : ""}</div>
     <div class="small">${w?.off ? "Día libre." : dIdx != null && plan?.days?.[dIdx] ? `Toca <b>${esc(plan.days[dIdx].name)}</b> en <b>${pl === "home" ? "casa" : "el gimnasio"}</b>${w?.tele ? " (teletrabajo)" : ""}.` : "No toca ningún día del plan."}
-      ${sess.length ? `<br>Registrado: ${sess.map(l => esc(l.day) + " (" + (l.place === "home" ? "casa" : "gimnasio") + ")").join(", ")}.` : ""}</div>
-    <div class="grid2"><div class="field"><label for="cal-ov">Corregir este día</label><select class="input" id="cal-ov">${OV_OPTS.map(([k, l]) => `<option value="${k}" ${ovKey(S.calOv?.[iso]) === k ? "selected" : ""}>${l}</option>`).join("")}</select></div></div>
+      ${w?.weigh ? `<br>Pesaje${S.profile?.trainer ? " con " + esc(S.profile.trainer) : ""}: apunta el resultado en <b>Progreso → Añadir medición</b>.` : ""}
+      ${sess.length ? `<br>Registrado: ${sess.map(l => esc(l.day) + " (" + (l.place === "home" ? "casa" : "gimnasio") + ")").join(", ")}.` : ""}
+      ${meas.length ? `<br>Medición: ${meas.map(b => fmtN(b.weight) + " kg · " + fmtN(b.fat) + " % grasa").join(", ")}.` : ""}</div>
+    <div class="grid2"><div class="field"><label for="cal-ov">Corregir este día</label><select class="input" id="cal-ov">${ovOptions().map(([k, l]) => `<option value="${esc(k)}" ${ovKey(S.calOv?.[iso]) === k ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div></div>
     <div class="row"><button class="btn primary" data-act="calSaveDay">Guardar día</button><button class="btn" data-act="calSaveWeek">Aplicar de lunes a viernes</button></div></div>`;
-  return head + sync + grid + detail;
+  const cfg = shiftCfg(), list = cfg.list || [];
+  const shifts = `<section><h2>Tus turnos</h2><div class="panel stack" style="margin-top:10px">
+    <p class="small muted">El código es el que pones en el título del evento (por ejemplo «Semana de tarde T1»). Si un día de teletrabajo no lleva código, se usa el turno por defecto.</p>
+    ${list.map((s, i) => `<div class="shrow"><input class="input" id="sh-c-${i}" value="${esc(s.code)}" aria-label="Código"><input class="input num" id="sh-s-${i}" type="time" value="${esc(s.start)}" aria-label="Entrada"><span class="muted">a</span><input class="input num" id="sh-e-${i}" type="time" value="${esc(s.end)}" aria-label="Salida"><button class="editbtn danger" data-delshift="${i}" aria-label="Quitar turno">✕</button></div>`).join("") || '<p class="small muted">Aún no hay turnos definidos.</p>'}
+    <div class="row" style="gap:6px"><button class="btn ghost" data-act="addShift">+ Añadir turno</button></div>
+    <div class="grid2"><div class="field"><label for="sh-tele">Turno por defecto en teletrabajo</label><select class="input" id="sh-tele"><option value="">Ninguno</option>${list.map(s => `<option ${cfg.teleDefault === s.code ? "selected" : ""}>${esc(s.code)}</option>`).join("")}</select></div></div>
+    <div class="row"><button class="btn primary" data-act="saveShifts">Guardar turnos</button></div></div></section>`;
+  return head + sync + grid + detail + shifts;
 }
 async function saveOverrides(days) {
   const cur = {...(S.calOv || {})};
   for (const [d, v] of Object.entries(days)) { if (v) cur[d] = v; else delete cur[d]; }
-  // se conservan solo los ajustes de los últimos 60 días en adelante
   const min = isoAdd(todayISO(), -60); for (const d of Object.keys(cur)) if (d < min) delete cur[d];
   try { await S.db.doc("calendar/overrides").set({days: cur}); toast("Calendario actualizado"); } catch { toast("No se pudo guardar el ajuste."); }
+}
+function readShiftForm() {
+  const list = []; document.querySelectorAll('[id^="sh-c-"]').forEach(el => { const i = el.id.slice(5); const code = el.value.trim().toUpperCase(); if (!/^[MTN]\d{1,2}$/.test(code)) return; list.push({code, start: $("#sh-s-" + i).value, end: $("#sh-e-" + i).value}); });
+  return list;
 }
 function scheduleContext() {
   const t = todayISO(), lines = [];
   for (let i = -3; i <= 13; i++) { const iso = isoAdd(t, i), w = workDay(iso); if (!w) continue;
     lines.push(`${iso} (${fmtDate(iso, {weekday: "long"})}${i === 0 ? ", HOY" : ""}): ${workLabel(w)} → entreno sugerido en ${placeFor(iso) === "home" ? "casa" : "gimnasio"}`); }
+  const nw = nextWeigh(); if (nw) lines.push(`PRÓXIMO PESAJE (revisión de composición corporal${S.profile?.trainer ? " con " + S.profile.trainer : ""}): ${nw}, dentro de ${Math.round((new Date(nw) - new Date(t)) / 864e5)} días.`);
+  const defs = (shiftCfg().list || []).map(s => `${s.code} ${s.start}–${s.end}`).join(", ");
+  if (defs) lines.unshift(`Turnos: ${defs}.${shiftCfg().teleDefault ? " En teletrabajo suele hacer " + shiftCfg().teleDefault + "." : ""}`);
   return lines.join("\n");
+}
+
+
+/* ---------- objetivos de composición corporal ---------- */
+const GOAL_M = {weight: ["Peso", "kg", 1], fat: ["Grasa corporal", "%", 1], muscle: ["Masa muscular", "kg", 1]};
+function goalSeries(metric, src) { return [...S.body].filter(b => b[metric] != null && (!src || b.source === src)).sort((a, b) => a.date.localeCompare(b.date)); }
+function goalTrend(metric, src) {
+  const recent = goalSeries(metric, src).filter(p => p.date >= isoAdd(todayISO(), -120));
+  if (recent.length < 2) return null;
+  const x = recent.map(p => new Date(p.date + "T00:00").getTime() / 864e5), y = recent.map(p => +p[metric]);
+  if (x[x.length - 1] - x[0] < 7) return null;
+  const mx = x.reduce((a, b) => a + b, 0) / x.length, my = y.reduce((a, b) => a + b, 0) / y.length;
+  let num = 0, den = 0; x.forEach((xi, i) => { num += (xi - mx) * (y[i] - my); den += (xi - mx) ** 2; });
+  return den ? num / den : null; // unidades por día
+}
+function goalInfo(metric) {
+  const g = S.profile?.goals || {}, target = g[metric]; if (target == null || target === "") return null;
+  const src = g.source || "", ser = goalSeries(metric, src); if (!ser.length) return {metric, target, empty: true};
+  const start = ser[0][metric], cur = ser[ser.length - 1][metric], dir = Math.sign(target - start) || Math.sign(target - cur) || 1;
+  const done = (cur - target) * dir >= 0, slope = goalTrend(metric, src);
+  const pct = start === target ? 100 : Math.max(0, Math.min(100, (cur - start) / (target - start) * 100));
+  let eta = null; if (!done && slope && Math.sign(slope) === Math.sign(target - cur)) eta = isoAdd(todayISO(), Math.ceil((target - cur) / slope));
+  let need = null; if (!done && g.date && g.date > todayISO()) need = (target - cur) / ((new Date(g.date) - new Date(todayISO())) / 864e5);
+  return {metric, target, start, cur, startDate: ser[0].date, curDate: ser[ser.length - 1].date, done, pct, slope, eta, need};
+}
+function goalsContext() {
+  const g = S.profile?.goals; if (!g) return "";
+  return Object.keys(GOAL_M).map(m => { const i = goalInfo(m); if (!i || i.empty) return null; const [l, u] = GOAL_M[m];
+    return `${l}: actual ${fmtN(i.cur)} ${u}, objetivo ${fmtN(i.target)} ${u}${i.done ? " (CONSEGUIDO)" : ""}${i.slope ? `, ritmo ${fmtN(i.slope * 30, 2)} ${u}/mes` : ""}${i.eta ? `, llegaría hacia ${i.eta}` : ""}`; }).filter(Boolean).join("; ")
+    + (g.date ? `. Fecha objetivo: ${g.date}` : "") + (g.source ? `. Fuente de referencia: ${g.source}` : "");
+}
+function viewGoals() {
+  const g = S.profile?.goals || {}, all = [...S.body].sort((a, b) => a.date.localeCompare(b.date)), last = all[all.length - 1];
+  const sources = [...new Set(all.map(b => b.source).filter(Boolean))];
+  const lean = last && last.fat != null ? last.weight * (1 - last.fat / 100) : null;
+  const implied = f => lean && f > 0 && f < 60 ? lean / (1 - f / 100) : null;
+  const nw = nextWeigh(), nwTxt = nw ? `<p class="small" style="margin-top:8px">Próximo pesaje: <b>${fmtDate(nw, {weekday: "long", day: "numeric", month: "long"})}</b> (en ${Math.round((new Date(nw) - new Date(todayISO())) / 864e5)} días)${S.profile?.trainer ? " con " + esc(S.profile.trainer) : ""}.</p>` : "";
+  if (S.editGoals) {
+    const fatT = num(g.fat);
+    return `<section><h2>Objetivos</h2><div class="panel stack" style="margin-top:10px">
+      <div class="grid2">
+        <div class="field"><label for="g-weight">Peso objetivo (kg)</label><input class="input num" id="g-weight" inputmode="decimal" value="${g.weight ?? ""}"></div>
+        <div class="field"><label for="g-fat">Grasa objetivo (%)</label><input class="input num" id="g-fat" inputmode="decimal" value="${g.fat ?? ""}"></div>
+        <div class="field"><label for="g-muscle">Masa muscular objetivo (kg)</label><input class="input num" id="g-muscle" inputmode="decimal" value="${g.muscle ?? ""}"></div>
+        <div class="field"><label for="g-date">Fecha objetivo (opcional)</label><input class="input" id="g-date" type="date" value="${esc(g.date || "")}"></div>
+        <div class="field"><label for="g-src">Medir con</label><select class="input" id="g-src"><option value="">Todas las fuentes</option>${sources.map(s => `<option ${g.source === s ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></div></div>
+      ${lean ? `<p class="small muted">Tu masa magra actual es de unos <b>${fmtN(lean)} kg</b> (peso sin grasa). Manteniéndola, ${[18, 16, 15, 14, 12].map(f => `${f} % de grasa ≈ <b>${fmtN(implied(f))} kg</b>`).join(" · ")}.${fatT ? ` Con tu objetivo de ${fmtN(fatT)} % pesarías unos <b>${fmtN(implied(fatT))} kg</b>.` : ""}</p>` : ""}
+      <p class="small muted">Es mejor medir siempre con la misma fuente: cada báscula da cifras distintas.</p>
+      <div class="row"><button class="btn primary" data-act="saveGoals">Guardar objetivos</button><button class="btn ghost" data-act="cancelGoals">Cancelar</button>${Object.keys(g).length ? `<button class="btn ghost" data-act="askGoals">Pedir propuesta al entrenador</button>` : ""}</div></div></section>`;
+  }
+  const infos = Object.keys(GOAL_M).map(goalInfo).filter(Boolean);
+  if (!infos.length) return `<section><h2>Objetivos</h2><div class="empty stack" style="margin-top:10px;align-items:center">Define tus objetivos de peso, grasa corporal y masa muscular para ver cuánto te falta y a qué ritmo vas.
+    ${lean ? `<span class="small">Con tu masa magra actual (${fmtN(lean)} kg), un 15 % de grasa equivaldría a unos ${fmtN(implied(15))} kg.</span>` : ""}
+    <div class="row"><button class="btn primary" data-act="editGoals">Definir objetivos</button><button class="btn ghost" data-act="askGoals">Pedir propuesta al entrenador</button></div></div>${nwTxt}</section>`;
+  const card = i => {
+    const [l, u] = GOAL_M[i.metric];
+    if (i.empty) return `<div class="kpi"><div class="eyebrow">${l}</div><div class="small muted" style="margin-top:6px">Objetivo ${fmtN(i.target)} ${u}. Sin mediciones de esta fuente.</div></div>`;
+    const rem = i.target - i.cur, monthly = i.slope != null ? i.slope * 30 : null;
+    const status = i.done ? `<span class="pill good">Conseguido</span>` : i.need != null && monthly != null ? (Math.sign(monthly) === Math.sign(i.need) && Math.abs(monthly) >= Math.abs(i.need * 30) * 0.9 ? `<span class="pill good">En ritmo</span>` : `<span class="pill warn">Por detrás</span>`) : "";
+    return `<div class="kpi goal"><div class="row between"><div class="eyebrow">${l}</div>${status}</div>
+      <div class="v">${fmtN(i.cur)}<small>${u}</small> <span class="gt">→ ${fmtN(i.target)} ${u}</span></div>
+      <div class="nutbar"><i style="width:${i.pct}%"></i></div>
+      <div class="small" style="margin-top:6px">${i.done ? "Has alcanzado el objetivo." : `Faltan <b class="num">${rem > 0 ? "+" : ""}${fmtN(rem)} ${u}</b> · ${fmtN(i.pct, 0)} % del camino desde ${fmtDate(i.startDate)}`}</div>
+      <div class="small muted">${monthly == null ? "Faltan mediciones para calcular el ritmo." : `Ritmo: ${monthly > 0 ? "+" : ""}${fmtN(monthly, 2)} ${u}/mes.`} ${i.done ? "" : i.eta ? `Al ritmo actual llegarías hacia <b>${fmtDate(i.eta, {month: "long", year: "numeric"})}</b>.` : monthly != null ? "La tendencia actual no va hacia el objetivo." : ""}</div>
+      ${i.need != null ? `<div class="small muted">Para llegar el ${fmtDate(S.profile.goals.date, {day: "numeric", month: "long", year: "numeric"})} necesitas ${i.need > 0 ? "+" : ""}${fmtN(i.need * 30, 2)} ${u}/mes.</div>` : ""}</div>`;
+  };
+  return `<section><div class="row between"><h2>Objetivos</h2><button class="btn ghost" data-act="editGoals">Editar</button></div>
+    <div class="goals" style="margin-top:10px">${infos.map(card).join("")}</div>
+    <p class="small muted" style="margin-top:6px">${g.source ? "Medido con " + esc(g.source) + ". " : ""}El ritmo se calcula con las mediciones de los últimos 120 días.${g.date ? " Fecha objetivo: " + fmtDate(g.date, {day: "numeric", month: "long", year: "numeric"}) + "." : ""}</p>${nwTxt}</section>`;
 }
 
 function calStale(h) { return !S.cal?.syncedAt || Date.now() - new Date(S.cal.syncedAt).getTime() > h * 3600e3; }
@@ -800,7 +922,7 @@ function viewProg() {
     ${l.note ? `<p class="small" style="margin-top:6px">${esc(l.note)}</p>` : ""}
     <div style="margin-top:6px">${S.confirmDel === "l:" + l.id ? `<button class="btn danger" data-dellog="${l.id}">Confirmar borrado</button>` : `<button class="editbtn" data-askdel="l:${l.id}">Borrar sesión</button>`}</div></details>`).join("") : `<div class="empty">Todavía no hay sesiones registradas.</div>`;
   return `<div class="top"><div><div class="eyebrow">Desde el ${first ? fmtDate(first.date, {day: "numeric", month: "long"}) : "primer registro"}</div><h1>Progreso</h1></div></div>
-    ${bodySec}${viewNut()}<section><h2 style="margin-bottom:10px">Cargas por ejercicio</h2>${exSec}</section><section><h2 style="margin-bottom:6px">Sesiones</h2><div class="panel" style="padding-block:4px">${sess}</div></section>`;
+    ${viewGoals()}${bodySec}${viewNut()}<section><h2 style="margin-bottom:10px">Cargas por ejercicio</h2>${exSec}</section><section><h2 style="margin-bottom:6px">Sesiones</h2><div class="panel" style="padding-block:4px">${sess}</div></section>`;
 }
 
 /* ---------- vista: entrenador ---------- */
@@ -864,6 +986,8 @@ ${plan("home") || "Sin definir."}
 ÚLTIMAS SESIONES REGISTRADAS (más reciente primero):
 ${logs || "Aún no hay sesiones registradas en la app."}
 
+OBJETIVOS DE COMPOSICIÓN CORPORAL: ${goalsContext() || "sin definir"}
+
 HORARIO DE TRABAJO (de su Google Calendar o marcado a mano; teletrabajo = entrena en casa con la rutina de casa):
 ${scheduleContext() || "Sin datos de horario."}
 
@@ -877,7 +1001,8 @@ function rules() {
 - Progresión: usa doble progresión (cuando completa todas las series en el tope de reps con buena técnica, sube la carga el mínimo posible: 1-2,5 kg en máquinas y mancuernas). Ten en cuenta la sensación registrada (Fácil, Bien, Duro, Al fallo) y la energía.
 - Adapta el enfoque a su fase actual: en déficit o recomposición, mantener fuerza y masa muscular con proteína alta; en mantenimiento, rendimiento y progresión estable; en superávit, ganar músculo minimizando la grasa. Si te pide objetivos para una fase nueva, propón kcal y gramos de proteína, grasa e hidratos justificados con su peso y actividad.
 - Ten en cuenta sus notas generales (fatiga, horarios, molestias): son información que quiere que recuerdes siempre.
-- Ten en cuenta su horario de trabajo: en semanas de tarde suele entrenar por la mañana y en semanas de mañana por la tarde; los días de teletrabajo entrena en casa con la rutina de casa. Ajusta volumen, horario de comidas y descanso a su turno.
+- Ten en cuenta su horario de trabajo: en semanas de tarde suele entrenar por la mañana y en semanas de mañana por la tarde; los días de teletrabajo entrena en casa con la rutina de casa. Ajusta volumen, horario de comidas y descanso a su turno (tienes el horario de cada código de turno).
+- Los pesajes son revisiones con su entrenador del gimnasio en las que mide su composición corporal y reajustan ejercicios. Si se acerca uno, ayúdale a preparar qué preguntar y qué revisar; después, analiza el resultado frente a sus objetivos.
 - En nutrición da ejemplos prácticos con comida española habitual y cantidades aproximadas.
 - Si menciona dolor, lesión, mareo u otro síntoma médico, recomienda parar y consultar con un profesional sanitario; no diagnostiques.
 - Sé breve: 4-10 líneas salvo que pida un plan detallado. Usa listas cortas con guiones y **negrita** solo para lo clave. No uses tablas.
@@ -1133,6 +1258,7 @@ document.addEventListener("click", async ev => {
   if (ds.saveday != null) { const plan = JSON.parse(JSON.stringify(S.plans[S.rPlace])); plan.days[+ds.saveday].name = $("#dn").value.trim() || plan.days[+ds.saveday].name; S.editDay = null; await savePlan(S.rPlace, plan); return; }
   if (ds.delday != null) { const plan = JSON.parse(JSON.stringify(S.plans[S.rPlace])); plan.days.splice(+ds.delday, 1); S.editDay = null; S.confirmDel = null; await savePlan(S.rPlace, plan); return; }
   if (ds.addex != null) { const plan = JSON.parse(JSON.stringify(S.plans[S.rPlace])); const day = plan.days[+ds.addex]; day.ex.splice(Math.max(0, day.ex.length - (isCardio(day.ex[day.ex.length - 1]?.n || "") ? 1 : 0)), 0, {n: "Nuevo ejercicio", t: "3 series (10-10-10)", last: "—", note: "", tip: "", prog: "Mantener"}); S.editing = `${+ds.addex}-${day.ex.findIndex(x => x.n === "Nuevo ejercicio")}`; await savePlan(S.rPlace, plan); return; }
+  if (ds.delshift != null) { const p = JSON.parse(JSON.stringify(S.profile || {})); const list = readShiftForm(); list.splice(+ds.delshift, 1); p.shifts = {list, teleDefault: (p.shifts || {}).teleDefault || ""}; await saveProfile(p); return; }
   if (ds.calday) { S.calSel = ds.calday; render(); return; }
   if (ds.nut) { S.nutMetric = ds.nut; render(); return; }
   if (ds.metric) { S.metric = ds.metric; render(); return; }
@@ -1182,6 +1308,16 @@ document.addEventListener("click", async ev => {
     return;
   }
   if (a === "calSync") return syncCalendar(true);
+  if (a === "addShift") { const p = JSON.parse(JSON.stringify(S.profile || {})); const cfg = p.shifts || {list: [], teleDefault: ""}; cfg.list = [...readShiftForm(), {code: "M" + ((cfg.list || []).length + 1), start: "08:00", end: "16:00"}]; p.shifts = cfg; await saveProfile(p); return; }
+  if (a === "saveShifts") { const p = JSON.parse(JSON.stringify(S.profile || {})); const list = readShiftForm(); const td = $("#sh-tele").value; p.shifts = {list, teleDefault: list.some(x => x.code === td) ? td : ""}; await saveProfile(p); toast("Turnos guardados"); return; }
+  if (a === "editGoals") { S.editGoals = true; render(); return; }
+  if (a === "cancelGoals") { S.editGoals = false; render(); return; }
+  if (a === "saveGoals") {
+    const g = {}; for (const k of ["weight", "fat", "muscle"]) { const v = num($("#g-" + k).value); if (v != null) g[k] = v; }
+    if ($("#g-date").value) g.date = $("#g-date").value; if ($("#g-src").value) g.source = $("#g-src").value;
+    S.editGoals = false; await saveProfile({...S.profile, goals: g}); toast("Objetivos guardados"); render(); return;
+  }
+  if (a === "askGoals") { send("Propón objetivos realistas de peso, % de grasa y masa muscular para mí, con un plazo, a partir de mis mediciones y mi fase actual. Explica cada cifra y cuánto debería cambiar al mes."); return; }
   if (a === "calChoose") return loadCalendars();
   if (a === "calCancelList") { S.calList = null; render(); return; }
   if (a === "calSaveList") {
@@ -1190,10 +1326,10 @@ document.addEventListener("click", async ev => {
     S.cal = {...(S.cal || {}), calendars: picked, calNames: nm}; S.calList = null;
     await syncCalendar(true); return;
   }
-  if (a === "calSaveDay") { const k = $("#cal-ov").value; await saveOverrides({[S.calSel]: k === "auto" ? null : ovValue[k]}); return; }
+  if (a === "calSaveDay") { await saveOverrides({[S.calSel]: ovValue($("#cal-ov").value)}); return; }
   if (a === "calSaveWeek") {
     const k = $("#cal-ov").value, mon = isoAdd(S.calSel, -((wdOf(S.calSel) + 6) % 7)), upd = {};
-    for (let i = 0; i < 5; i++) upd[isoAdd(mon, i)] = k === "auto" ? null : ovValue[k];
+    for (let i = 0; i < 5; i++) upd[isoAdd(mon, i)] = ovValue(k);
     await saveOverrides(upd); return;
   }
   if (a === "exportDrive") return exportToDrive();

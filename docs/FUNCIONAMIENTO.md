@@ -25,14 +25,14 @@ Los datos son documentos JSON organizados por colecciones:
 
 | Ruta | Contenido |
 |---|---|
-| `profile/main` | Perfil: `name`, `height` (cm), `goal` (fase), `gym`, `trainer`, `equipment`, `macros[]`, `notes[]`, `reminders[]`, `rest[]` (tabla de descansos, opcional), `tower[]` (torre de pesos, opcional) |
+| `profile/main` | Perfil: `name`, `height` (cm), `goal` (fase), `gym`, `trainer`, `equipment`, `macros[]`, `notes[]`, `reminders[]`, `rest[]` (tabla de descansos, opcional), `tower[]` (torre de pesos, opcional), `shifts` → `{list: [{code, start, end}], teleDefault}`, `goals` → `{weight, fat, muscle, date, source}` |
 | `plan/gym`, `plan/home` | Rutinas: `title`, `subtitle`, `days[]` → `{name, ex[]}` → `{n, t, last, note, tip, prog}` |
 | `logs/<id>` | Una sesión: `date`, `place` (`gym`/`home`), `day`, `energy` (1-5), `note`, `createdAt`, `entries[]` |
 | `body/<id>` | Una medición: `date`, `weight`, `fat`, `muscle`, `source`, `note` |
 | `daily/<AAAA-MM-DD>` | Un día de nutrición y actividad: `steps`, `kcal`, `protein`, `fat`, `carbs`, `source` |
 | `videos/<nombre-normalizado>` | Vídeos de un ejercicio: `n`, `items[]` → `{id, kind, label, url, fileId, asset, title, addedAt}` |
 | `chat/main` | Últimos 40 mensajes del entrenador |
-| `calendar/main` | Última sincronización con Google Calendar: `syncedAt`, `calendars[]`, `calNames`, `from`, `to`, `days` → `{AAAA-MM-DD: {shift: "M"/"T"/null, tele, off, titles[]}}` |
+| `calendar/main` | Última sincronización con Google Calendar: `syncedAt`, `calendars[]`, `calNames`, `from`, `to`, `days` → `{AAAA-MM-DD: {shift: "M"/"T"/"N"/null, code: "M1"…/null, tele, off, weigh, titles[]}}` |
 | `calendar/overrides` | Ajustes manuales por día: `days` → `{AAAA-MM-DD: {shift, tele, off}}`. Se conservan los de los últimos 60 días en adelante. |
 
 **Campos de un ejercicio del plan:**
@@ -108,6 +108,11 @@ El **nombre del día** se copia en cada sesión al guardarla. Renombrar un día 
 | 1RM estimado | Fórmula de Epley sobre la mejor serie: kg × (1 + reps ÷ 30). |
 | Volumen | Suma de kg × reps de todas las series. |
 | Medias de nutrición | Media de los días con dato dentro de los últimos 7 días; los días sin dato no cuentan. |
+| Objetivos: progreso | (actual − primera medición) ÷ (objetivo − primera medición), entre 0 y 100 %. Solo con mediciones de la fuente elegida, si hay una. |
+| Objetivos: ritmo | Pendiente de una regresión lineal sobre las mediciones de los últimos 120 días (al menos 2 mediciones separadas 7 días o más), expresada por mes (× 30). |
+| Objetivos: fecha estimada | Hoy + (objetivo − actual) ÷ ritmo diario, solo si el ritmo va en la dirección del objetivo. |
+| Objetivos: «En ritmo» | Con fecha objetivo: el ritmo actual es al menos el 90 % del ritmo necesario (objetivo − actual) ÷ días que faltan. |
+| Masa magra | peso × (1 − % grasa ÷ 100). Peso equivalente a un % de grasa: masa magra ÷ (1 − % ÷ 100). |
 
 ### 3.6 Importación de Samsung Health
 
@@ -134,12 +139,16 @@ El entrenador no tiene más memoria que esa. Se guardan los últimos 40 mensajes
 
 | Paso | Regla |
 |---|---|
-| Qué eventos cuentan | Título con «tarde» → turno **T**; «mañana» → turno **M**; si no, un código `M1`, `T2`… (letra M o T seguida de un número). «teletrabajo», «remoto», «home office» o «desde casa» → **teletrabajo**. «vacaciones», «día libre», «libranza», «festivo» o «baja» → **libre**. Los demás eventos se ignoran. |
+| Pesajes | Título con «pesaje», «EVOLT», «báscula» o «composición corporal» → **pesaje** (`weigh`). Un evento de pesaje no cambia el turno de ese día. |
+| Qué eventos cuentan | Título con «tarde» → turno **T**; «mañana» → turno **M**; «noche» → turno **N**. Un código como `M1`, `T1` o `N2` (letra seguida de un número) se guarda como `code`; si no hay palabra, la letra del código da el turno, y si el código contradice la palabra, se ignora. «teletrabajo», «remoto», «home office» o «desde casa» → **teletrabajo**. «vacaciones», «día libre», «libranza», «festivo» o «baja» → **libre**. Los demás eventos se ignoran. |
+| Turno por defecto en teletrabajo | Si un día es de teletrabajo y no tiene código, se le asigna `shifts.teleDefault` (si coincide con el tipo de turno, cuando lo hay). |
+| Horario de cada turno | `shifts.list` asigna a cada código su hora de entrada y salida. Se muestra en Hoy, en la Agenda y se envía al entrenador. |
 | Qué días cubre un evento | De día completo: del inicio al día anterior a su fin. Con hora: del día de inicio al día en que termina, salvo que termine a las 00:00. |
-| Rango leído | De 14 días atrás a 42 días adelante, en los calendarios elegidos (por defecto, el principal). |
+| Calendarios leídos | Los elegidos en «Elegir calendarios» (por defecto, el principal). |
 | Ajuste manual | Sustituye por completo al dato de Google Calendar en ese día. «Automático» lo quita. |
 | Efecto en **Hoy** | Si hoy es teletrabajo, el lugar propuesto es **Casa**; si no, **Gimnasio**. Elegir el lugar a mano manda sobre la propuesta. |
-| Efecto en el entrenador | Recibe el turno y el lugar sugerido de cada día con datos, de 3 días atrás a 13 adelante. |
+| Efecto en el entrenador | Recibe la lista de turnos con su horario, el turno y el lugar sugerido de cada día con datos (de 3 días atrás a 13 adelante) y la fecha del próximo pesaje. |
+| Rango leído | De 14 días atrás a 60 días adelante. |
 | Día de rutina | No cambia: sigue dependiendo del día de la semana (lunes = día 1…). El calendario solo decide gimnasio o casa. |
 
 ## 4. Formatos de exportación
