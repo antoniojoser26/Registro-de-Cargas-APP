@@ -1,0 +1,313 @@
+{
+  "app": "registro-de-cargas",
+  "version": 1,
+  "exportedAt": "2026-10-01T00:00:00.000Z",
+  "docs": {
+    "profile/main": {
+      "name": "Ejemplo",
+      "height": 175,
+      "goal": "Recomposición corporal",
+      "gym": "",
+      "trainer": "",
+      "equipment": "Mancuernas y banco",
+      "macros": [
+        {
+          "name": "Calorías",
+          "target": "2.200 - 2.300 kcal",
+          "why": "Ligero déficit"
+        },
+        {
+          "name": "Proteína",
+          "target": "150 g",
+          "why": "Mantener la masa muscular"
+        },
+        {
+          "name": "Grasas",
+          "target": "60 g",
+          "why": "Salud hormonal"
+        },
+        {
+          "name": "Hidratos",
+          "target": "240 g",
+          "why": "Energía para entrenar"
+        }
+      ],
+      "notes": [
+        {
+          "text": "Nota de ejemplo: revisar la técnica de sentadilla",
+          "status": "Pendiente"
+        }
+      ],
+      "reminders": [
+        "Calentar 5-10 minutos antes de empezar"
+      ],
+      "rest": [
+        {
+          "type": "Multiarticular",
+          "time": "2 - 3 min",
+          "goal": "Fuerza y tensión mecánica",
+          "ex": "Sentadilla, press, remo"
+        },
+        {
+          "type": "Aislamiento",
+          "time": "1 - 1:30 min",
+          "goal": "Estímulo local",
+          "ex": "Bíceps, tríceps, laterales"
+        }
+      ]
+    },
+    "plan/gym": {
+      "title": "Gimnasio",
+      "subtitle": "Rutina de ejemplo de 4 días (torso/pierna).",
+      "days": [
+        {
+          "name": "Día 1: TORSO A",
+          "ex": [
+            {
+              "n": "Press de banca (BARRA)",
+              "t": "3 series (8-8-8)",
+              "last": "60kg total",
+              "note": "",
+              "tip": "Escápulas juntas",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Remo con barra",
+              "t": "3 series (10-10-10)",
+              "last": "50kg total",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Press militar con mancuernas",
+              "t": "3 series (10-10-10)",
+              "last": "14kg por lado",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Curl de bíceps con mancuernas",
+              "t": "3 series (12-12-12)",
+              "last": "10kg por lado",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Cardio final (Cinta)",
+              "t": "20min",
+              "last": "—",
+              "note": "",
+              "tip": "",
+              "prog": "N/A"
+            }
+          ]
+        },
+        {
+          "name": "Día 2: PIERNA A",
+          "ex": [
+            {
+              "n": "Sentadilla (BARRA)",
+              "t": "3 series (8-8-8)",
+              "last": "70kg total",
+              "note": "",
+              "tip": "Rodillas en la línea de los pies",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Peso muerto rumano",
+              "t": "3 series (10-10-10)",
+              "last": "60kg total",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Prensa de piernas",
+              "t": "3 series (12-12-12)",
+              "last": "120kg total",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Elevación de gemelos",
+              "t": "3 series (15-15-15)",
+              "last": "40kg total",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            }
+          ]
+        },
+        {
+          "name": "Día 3: TORSO B",
+          "ex": [
+            {
+              "n": "Jalón al pecho",
+              "t": "3 series (10-10-10)",
+              "last": "50kg total",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Press inclinado con mancuernas",
+              "t": "3 series (10-10-10)",
+              "last": "18kg por lado",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Elevaciones laterales con mancuernas",
+              "t": "3 series (15-15-15)",
+              "last": "6kg por lado",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Extensión de tríceps en polea",
+              "t": "3 series (12-12-12)",
+              "last": "20kg total",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            }
+          ]
+        },
+        {
+          "name": "Día 4: PIERNA B",
+          "ex": [
+            {
+              "n": "Zancada búlgara (MANCUERNA)",
+              "t": "3 series (10-10-10)",
+              "last": "12kg por lado",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Curl femoral",
+              "t": "3 series (12-12-12)",
+              "last": "35kg total",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Extensión de cuádriceps",
+              "t": "3 series (12-12-12)",
+              "last": "40kg total",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Plancha",
+              "t": "3 series (1min)",
+              "last": "Corporal",
+              "note": "",
+              "tip": "",
+              "prog": "N/A"
+            }
+          ]
+        }
+      ]
+    },
+    "plan/home": {
+      "title": "Casa",
+      "subtitle": "Rutina de ejemplo con mancuernas.",
+      "days": [
+        {
+          "name": "Día 1: CUERPO COMPLETO",
+          "ex": [
+            {
+              "n": "Sentadilla goblet",
+              "t": "3 series (12-12-12)",
+              "last": "16kg",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            },
+            {
+              "n": "Flexiones",
+              "t": "3 series (12-10-8)",
+              "last": "Corporal",
+              "note": "",
+              "tip": "",
+              "prog": "N/A"
+            },
+            {
+              "n": "Remo con mancuerna a una mano",
+              "t": "3 series (12-12-12)",
+              "last": "14kg por lado",
+              "note": "",
+              "tip": "",
+              "prog": "Mantener"
+            }
+          ]
+        }
+      ]
+    },
+    "body/ej1": {
+      "date": "2026-09-01",
+      "weight": 80.0,
+      "fat": 22.0,
+      "muscle": 34.0,
+      "source": "Báscula",
+      "note": "Medición de ejemplo"
+    },
+    "body/ej2": {
+      "date": "2026-09-29",
+      "weight": 78.6,
+      "fat": 20.8,
+      "muscle": 34.3,
+      "source": "Báscula",
+      "note": "Medición de ejemplo"
+    },
+    "logs/ej1": {
+      "date": "2026-09-28",
+      "place": "gym",
+      "day": "Día 1: TORSO A",
+      "energy": 4,
+      "note": "Sesión de ejemplo",
+      "createdAt": 1790000000000,
+      "entries": [
+        {
+          "n": "Press de banca (BARRA)",
+          "sets": [
+            {
+              "kg": 60,
+              "reps": 8,
+              "tgt": 8
+            },
+            {
+              "kg": 60,
+              "reps": 8,
+              "tgt": 8
+            },
+            {
+              "kg": 60,
+              "reps": 7,
+              "tgt": 8
+            }
+          ],
+          "feel": "Duro",
+          "note": ""
+        },
+        {
+          "n": "Cardio final (Cinta)",
+          "cardio": true,
+          "min": 20,
+          "detail": "5 km/h 6 %",
+          "feel": "Bien",
+          "note": ""
+        }
+      ]
+    }
+  }
+}

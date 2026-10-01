@@ -4,6 +4,27 @@ Aplicación web para registrar entrenamientos de fuerza, seguir la composición 
 
 Es un único archivo HTML, sin servidor ni instalación. Funciona en el móvil y en el ordenador, y se puede añadir a la pantalla de inicio como si fuera una app.
 
+**Pruébala:** https://antoniojoser26.github.io/Registro-de-Cargas-APP/ (si GitHub Pages está activado en este repositorio).
+
+## Documentación
+
+| Documento | Contenido |
+|---|---|
+| [Manual de uso](docs/MANUAL.md) | Cómo usar cada pantalla, paso a paso, y preguntas frecuentes |
+| [Funcionamiento interno](docs/FUNCIONAMIENTO.md) | Arquitectura, modelo de datos, qué campos modifican a cuáles y formatos de exportación |
+| [Copia de ejemplo](ejemplos/copia-ejemplo.json) | Rutina y datos genéricos para probar la app: **Perfil → Copia de seguridad → Importar** |
+
+## Estructura del repositorio
+
+```
+index.html              La app completa
+manifest.webmanifest    Datos para instalarla en el móvil
+icon.svg                Icono
+docs/MANUAL.md          Manual de uso
+docs/FUNCIONAMIENTO.md  Funcionamiento interno y modelo de datos
+ejemplos/               Copia de seguridad de ejemplo
+```
+
 ## Qué hace
 
 - **Registrar.** Te propone el día de rutina que toca según el día de la semana (lunes = Día 1 … viernes = Día 5). Cada ejercicio viene rellenado con tus series, repeticiones y el peso de la última vez. Apuntas sensaciones por ejercicio (Fácil, Bien, Duro, Al fallo), la energía del día y notas.
@@ -19,6 +40,7 @@ Es un único archivo HTML, sin servidor ni instalación. Funciona en el móvil y
 - **Perfil.** Incluye:
   - Fase (recomposición, definición, mantenimiento, volumen) y objetivos de macros editables.
   - Notas y recordatorios.
+  - Exportación de todos los registros a CSV (series, cardio, composición, nutrición y rutinas) en un ZIP.
   - Copia de seguridad en JSON.
 
 ## Uso

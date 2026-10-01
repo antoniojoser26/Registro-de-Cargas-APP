@@ -228,7 +228,7 @@ const S = {
   busy: false, ctl: null, confirmClear: false, confirmDel: null,
   mcp: null, assets: null, videos: {}, vPlace: "gym", vAdd: null, vMode: "drive", driveFiles: null, driveState: "idle", driveErr: "", uploading: false,
   daily: [], nutMetric: "kcal", importing: "",
-  editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null,
+  editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, exporting: "", exportBusy: false,
   apiKey: lsGet("rc.apikey") || "", apiModel: lsGet("rc.model") || ""
 };
 
@@ -818,10 +818,77 @@ function viewMe() {
     <div class="row" style="margin-top:10px"><input class="input" id="newnote" placeholder="Nueva incidencia, decisión o recordatorio" style="flex:1;min-width:200px"><button class="btn" data-act="addNote">Añadir</button></div></div></section>
   <section><h2>Recordatorios de entrenamiento</h2><div class="panel" style="margin-top:10px"><div class="hist">${(pr.reminders || []).map((r, i) => `<div class="it"><div>${esc(r)}</div><div><button class="editbtn" data-delrem="${i}">Completado · quitar</button></div></div>`).join("") || '<div class="muted small">No hay recordatorios. Añade uno abajo.</div>'}</div>
     <div class="row" style="margin-top:10px"><input class="input" id="newrem" placeholder="Nuevo recordatorio (p. ej. bajar la barra en 3 segundos)" style="flex:1;min-width:200px"><button class="btn" data-act="addRem">Añadir</button></div></div></section>
-  ${apiSec}${backupSection()}
+  ${apiSec}${exportSection()}${backupSection()}
   <section><h2>Dónde se guardan tus datos</h2><p class="small" style="margin-top:8px">${HOSTED
     ? "En la base de datos privada de esta app dentro de tu cuenta de Claude: solo tú puedes verla y modificarla mientras no la compartas. Los vídeos subidos se guardan con la app; los de Drive siguen en tu Drive. El borrador de la sesión en curso queda en este dispositivo hasta que lo guardas."
     : "Solo en este navegador (almacenamiento local). No se envía a ningún servidor, salvo tus preguntas al entrenador, que van a la API de Anthropic con tu clave. Si borras los datos del navegador se pierden: exporta una copia de vez en cuando."}</p></section>`;
+}
+
+/* ---------- exportación de registros (CSV + JSON) ---------- */
+function csv(rows) {
+  const cell = v => { if (v == null) return ""; const s = String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  return rows.map(r => r.map(cell).join(",")).join("\n") + "\n";
+}
+function buildExport() {
+  const place = p => p === "home" ? "casa" : "gimnasio";
+  const logs = [...S.logs].sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.createdAt || 0) - (b.createdAt || 0));
+  const series = [["fecha", "lugar", "dia", "ejercicio", "serie", "kg", "reps", "reps_objetivo", "sensacion", "nota_ejercicio", "energia_sesion", "nota_sesion", "id_sesion"]];
+  const cardio = [["fecha", "lugar", "dia", "ejercicio", "minutos", "detalle", "sensacion", "nota", "id_sesion"]];
+  for (const l of logs) for (const e of l.entries || []) {
+    if (e.cardio) cardio.push([l.date, place(l.place), l.day, e.n, e.min, e.detail, e.feel, e.note, l.id]);
+    else (e.sets || []).forEach((s, i) => series.push([l.date, place(l.place), l.day, e.n, i + 1, s.kg, s.reps, s.tgt, e.feel, e.note, l.energy, l.note, l.id]));
+  }
+  const body = [["fecha", "peso_kg", "grasa_pct", "musculo_kg", "imc", "fuente", "nota"], ...[...S.body].sort((a, b) => a.date.localeCompare(b.date)).map(b => [b.date, b.weight, b.fat, b.muscle, b.weight ? +bmi(b.weight).toFixed(1) : "", b.source, b.note])];
+  const daily = [["fecha", "pasos", "kcal", "proteina_g", "grasa_g", "hidratos_g", "fuente"], ...[...S.daily].sort((a, b) => a.date.localeCompare(b.date)).map(d => [d.date, d.steps, d.kcal, d.protein, d.fat, d.carbs, d.source])];
+  const plans = [["rutina", "dia", "orden", "ejercicio", "objetivo", "ultimo_peso", "notas", "tecnica", "progresion"]];
+  for (const [k, p] of Object.entries(S.plans)) (p.days || []).forEach(d => d.ex.forEach((x, i) => plans.push([place(k), d.name, i + 1, x.n, x.t, x.last, x.note, x.tip, x.prog])));
+  return [
+    {name: "series.csv", mime: "text/csv", text: csv(series)},
+    {name: "cardio.csv", mime: "text/csv", text: csv(cardio)},
+    {name: "composicion_corporal.csv", mime: "text/csv", text: csv(body)},
+    {name: "nutricion_y_pasos.csv", mime: "text/csv", text: csv(daily)},
+    {name: "rutinas.csv", mime: "text/csv", text: csv(plans)},
+    {name: "copia_completa.json", mime: "application/json", text: JSON.stringify(backupData(), null, 2)}
+  ];
+}
+const stamp = () => { const d = new Date(); return todayISO() + " " + String(d.getHours()).padStart(2, "0") + "." + String(d.getMinutes()).padStart(2, "0"); };
+async function exportToDrive() {
+  const exp = S.profile?.drive?.exports; if (!S.mcp || !exp?.id) return;
+  S.exporting = "Creando carpeta…"; S.exportBusy = true; render();
+  const call = (input) => S.mcp.callTool("Google Drive", "create_file", input, {cache: false});
+  try {
+    const folder = (await call({title: stamp(), contentMimeType: "application/vnd.google-apps.folder", parentId: exp.id})).payload;
+    if (!folder?.id) throw {code: "tool_error", message: "sin id de carpeta"};
+    const files = buildExport();
+    for (let i = 0; i < files.length; i++) {
+      S.exporting = `Subiendo ${files[i].name} (${i + 1}/${files.length})…`; const el = $("#expState"); if (el) el.textContent = S.exporting;
+      await call({title: files[i].name, parentId: folder.id, textContent: files[i].text, contentMimeType: files[i].mime, disableConversionToGoogleType: true});
+    }
+    await saveProfile({...S.profile, lastExport: {at: new Date().toISOString(), url: folder.viewUrl || ""}});
+    S.exporting = ""; toast("Registros exportados a Drive");
+  } catch (e) {
+    S.exporting = {server_not_connected: "Google Drive no está conectado. Añádelo en claude.ai → Ajustes → Conectores.", needs_reauth: "Vuelve a conectar Google Drive en claude.ai → Ajustes → Conectores.", not_in_manifest: "No has dado permiso a esta app para escribir en Google Drive.", server_unavailable: "Google Drive no responde. Comprueba la carpeta antes de repetir: puede haberse creado a medias.", tool_error: "Drive devolvió un error: " + (e?.message || "")}[e?.code] || "No se pudo completar la exportación. Comprueba la carpeta en Drive antes de repetir.";
+  }
+  S.exportBusy = false; render();
+}
+async function exportZip() {
+  if (!window.JSZip) { toast("No se pudo preparar el ZIP."); return; }
+  const zip = new JSZip(); buildExport().forEach(f => zip.file(f.name, f.text));
+  const blob = await zip.generateAsync({type: "blob"});
+  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `registro-de-cargas ${stamp()}.zip`; document.body.append(link); link.click(); link.remove();
+}
+function exportSection() {
+  const pr = S.profile || {}, dr = pr.drive, le = pr.lastExport;
+  const files = "series, cardio, composición corporal, nutrición y pasos, rutinas y una copia completa en JSON";
+  if (HOSTED) return `<section><h2>Exportar registros</h2><div class="panel stack" style="margin-top:10px">
+    <p class="small">Guarda todo tu historial en tu Google Drive como archivos CSV (${files}). Cada exportación crea una carpeta con la fecha dentro de <b>Exportaciones</b>, así conservas el histórico completo para usarlo en otras apps u hojas de cálculo.</p>
+    ${le ? `<p class="small muted">Última exportación: ${new Date(le.at).toLocaleString("es-ES", {day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"})}${le.url ? ` · <a href="${esc(le.url)}" target="_blank" rel="noopener">abrir ↗</a>` : ""}</p>` : ""}
+    <div class="row">${S.mcp && dr?.exports?.id ? `<button class="btn primary" data-act="exportDrive" ${S.exportBusy ? "disabled" : ""}>Exportar a Drive</button>` : `<span class="small muted">${dr ? "La exportación a Drive solo funciona al abrir la app dentro de Claude." : "Aún no hay carpeta de Drive configurada."}</span>`}
+      ${dr?.root?.url ? `<a class="btn ghost" style="text-decoration:none;display:inline-flex;align-items:center" href="${esc(dr.root.url)}" target="_blank" rel="noopener">Carpeta de la app ↗</a>` : ""}</div>
+    <p class="small muted" id="expState">${esc(S.exporting || "")}</p></div></section>`;
+  return `<section><h2>Exportar registros</h2><div class="panel stack" style="margin-top:10px">
+    <p class="small">Descarga un ZIP con tus registros en CSV (${files}). Sirve para hojas de cálculo o para llevar tu histórico a otra app.</p>
+    <div class="row"><button class="btn primary" data-act="exportZip">Descargar ZIP</button></div></div></section>`;
 }
 
 /* ---------- copia de seguridad ---------- */
@@ -951,6 +1018,8 @@ document.addEventListener("click", async ev => {
     try { await S.db.collection("body").add({date: $("#b-date").value || todayISO(), weight: w, fat: f, muscle: m, source: $("#b-s").value, note: $("#b-n").value.trim()}); toast("Medición guardada"); } catch { toast("No se pudo guardar la medición."); }
     return;
   }
+  if (a === "exportDrive") return exportToDrive();
+  if (a === "exportZip") return exportZip();
   if (a === "createProfile") {
     const name = $("#s-name").value.trim(); if (!name) { toast("Escribe tu nombre."); return; }
     try {
