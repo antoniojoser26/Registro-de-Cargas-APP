@@ -1,2 +1,76 @@
-# Registro-de-Cargas-APP
-Aplicación Fitness para el registro de metricas sobre entrenamiento de fuerza y nutrición, especialmente diseñada para funcionar como apoyo diario durante el entrenamiento y con la capacidad de adjuntar el historial de Samsung Health
+# Registro de Cargas
+
+Aplicación web para registrar entrenamientos de fuerza, seguir la composición corporal y la nutrición, y consultar a un entrenador personal con IA que conoce todos tus datos.
+
+Es un único archivo HTML, sin servidor ni instalación. Funciona en el móvil y en el ordenador, y se puede añadir a la pantalla de inicio como si fuera una app.
+
+## Qué hace
+
+- **Registrar.** Te propone el día de rutina que toca según el día de la semana (lunes = Día 1 … viernes = Día 5). Cada ejercicio viene rellenado con tus series, repeticiones y el peso de la última vez. Apuntas sensaciones por ejercicio (Fácil, Bien, Duro, Al fallo), la energía del día y notas.
+- **Progresión automática.** Si completas todas las repeticiones objetivo con sensación Fácil o Bien, el ejercicio se marca como «Subir peso» (doble progresión).
+- **Rutinas.** Dos planes, gimnasio y casa. Puedes crear días y ejercicios y editarlos.
+- **Vídeos.** Cada ejercicio admite enlaces a tus vídeos de técnica (Google Fotos, Drive, YouTube…).
+- **Progreso.**
+  - Peso, % de grasa, masa muscular e IMC, con filtro por fuente de medición.
+  - Gráficas por ejercicio: carga máxima, 1RM estimado (Epley) y volumen.
+  - Historial de sesiones.
+- **Nutrición y actividad.** Importa la exportación de Samsung Health (pasos, calorías y macros) o apunta días a mano. Compara la media de 7 días con tus objetivos.
+- **Entrenador IA.** Chat con Claude que recibe tus rutinas, sesiones, mediciones, nutrición y notas, y te aconseja sobre cargas, fatiga y comidas.
+- **Perfil.** Incluye:
+  - Fase (recomposición, definición, mantenimiento, volumen) y objetivos de macros editables.
+  - Notas y recordatorios.
+  - Copia de seguridad en JSON.
+
+## Uso
+
+### Opción 1: GitHub Pages (recomendado, sirve también para el móvil)
+
+1. Haz un fork de este repositorio o sube estos archivos a uno tuyo.
+2. En **Settings → Pages**, elige la rama `main` y la carpeta `/ (root)`.
+3. Abre `https://<tu-usuario>.github.io/<repositorio>/` en el móvil.
+4. En el navegador, usa **Añadir a pantalla de inicio**.
+
+### Opción 2: en local
+
+Descarga `index.html` y ábrelo en el navegador.
+
+## Dónde se guardan los datos
+
+Todo se guarda **solo en tu navegador** (`localStorage`). No hay servidor ni cuentas, y nadie más ve tus datos.
+
+- Cada navegador y cada dispositivo tiene sus propios datos.
+- Para pasar los datos a otro dispositivo, usa **Perfil → Copia de seguridad**: exporta un `.json` en uno e impórtalo en el otro.
+- Si borras los datos del navegador, se pierden. Exporta una copia de vez en cuando.
+
+## Entrenador IA
+
+El entrenador llama a la API de Anthropic con **tu propia clave**:
+
+1. Crea una clave en [console.anthropic.com](https://console.anthropic.com).
+2. Pégala en **Perfil → Entrenador IA**.
+
+La clave se guarda solo en tu navegador y se envía únicamente a `api.anthropic.com`. Cada pregunta consume créditos de tu cuenta de la API.
+
+El modelo por defecto es `claude-sonnet-5-5`. Puedes cambiarlo en el mismo apartado; consulta los modelos disponibles en [docs.claude.com](https://docs.claude.com).
+
+> Usar una clave de API directamente en el navegador es adecuado para uso personal en tu propio dispositivo. No publiques una versión con tu clave dentro del código.
+
+## Importar desde Samsung Health
+
+1. En Samsung Health: menú ⋮ → **Ajustes** → **Descargar datos personales** → Descargar.
+2. Los archivos se guardan en **Mis archivos → Descargas → Samsung Health**. Comprime la carpeta en ZIP, o elige solo los CSV que contienen `step_daily_trend` y `health.nutrition`.
+3. En la app: **Progreso → Nutrición y actividad → Importar desde Samsung Health**.
+
+Se importan los últimos 120 días. Puedes repetirlo cuando quieras; los días ya importados se actualizan.
+
+## Calendario
+
+La app asocia los días de la rutina a los días de la semana: Día 1 = lunes, Día 2 = martes… Día 5 = viernes. Sábado y domingo son de descanso, aunque puedes registrar cualquier día manualmente.
+
+## Aviso
+
+Esta app no sustituye el consejo de un profesional sanitario, de un nutricionista o de un entrenador titulado. Si notas dolor o cualquier síntoma, para y consulta con un profesional.
+
+## Licencia
+
+MIT. Consulta [LICENSE](LICENSE).

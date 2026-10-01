@@ -1,0 +1,14 @@
+{
+  "name": "Registro de Cargas",
+  "short_name": "Cargas",
+  "description": "Registro de entrenamientos, composición corporal, nutrición y entrenador con IA.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F1F3F7",
+  "theme_color": "#1F4FD1",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
