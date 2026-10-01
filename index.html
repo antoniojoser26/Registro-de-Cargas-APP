@@ -359,7 +359,7 @@ const S = {
   busy: false, ctl: null, confirmClear: false, confirmDel: null,
   mcp: null, assets: null, videos: {}, vPlace: "gym", vAdd: null, vMode: "drive", driveFiles: null, driveState: "idle", driveErr: "", uploading: false,
   daily: [], nutMetric: "kcal", importing: "",
-  editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, showIdeas: false, attach: [], attachUrls: [], imgCaps: null, exporting: "", exportBusy: false,
+  editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, gcalWrite: lsGet("rc.gcalWrite") !== false, gcalMap: {}, showIdeas: false, attach: [], attachUrls: [], imgCaps: null, exporting: "", exportBusy: false,
   apiKey: lsGet("rc.apikey") || "", apiModel: lsGet("rc.model") || ""
 };
 
@@ -934,7 +934,9 @@ function viewCal() {
       ${sess.length ? `<br>Registrado: ${sess.map(l => esc(l.day) + " (" + (l.place === "home" ? "casa" : "gimnasio") + ")").join(", ")}.` : ""}
       ${meas.length ? `<br>Medición: ${meas.map(b => fmtN(b.weight) + " kg · " + fmtN(b.fat) + " % grasa").join(", ")}.` : ""}</div>
     <div class="grid2"><div class="field"><label for="cal-ov">Corregir este día</label><select class="input" id="cal-ov">${ovOptions().map(([k, l]) => `<option value="${esc(k)}" ${ovKey(S.calOv?.[iso]) === k ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div></div>
-    <div class="row"><button class="btn primary" data-act="calSaveDay">Guardar día</button><button class="btn" data-act="calSaveWeek">Aplicar de lunes a viernes</button></div></div>`;
+    ${S.mcp ? `<label class="row small" style="gap:8px"><input type="checkbox" id="gcalWrite" ${S.gcalWrite ? "checked" : ""}> Añadir también a Google Calendar${S.gcalMap?.[iso] ? ' <span class="pill good">ya añadido</span>' : ""}</label>` : ""}
+    <div class="row"><button class="btn primary" data-act="calSaveDay" ${S.calBusy ? "disabled" : ""}>Guardar día</button><button class="btn" data-act="calSaveWeek" ${S.calBusy ? "disabled" : ""}>Aplicar de lunes a viernes</button></div>
+    ${S.mcp && S.gcalWrite ? `<p class="small muted">Se crea un evento por día con el horario del turno. Si cambias o quitas el ajuste, la app borra el evento que creó; tus otros eventos no se tocan.</p>` : ""}</div>`;
   const cfg = shiftCfg(), list = cfg.list || [];
   const shifts = `<section><h2>Tus turnos</h2><div class="panel stack" style="margin-top:10px">
     <p class="small muted">El código es el que pones en el título del evento (por ejemplo «Semana de tarde T1»). Si un día de teletrabajo no lleva código, se usa el turno por defecto.</p>
@@ -944,11 +946,43 @@ function viewCal() {
     <div class="row"><button class="btn primary" data-act="saveShifts">Guardar turnos</button></div></div></section>`;
   return head + sync + grid + detail + shifts;
 }
+/* Escritura en Google Calendar: un evento por día ajustado. La app recuerda qué eventos creó ella
+   (calendar/gcal) para poder borrarlos o sustituirlos sin tocar los que creaste tú. */
+function gcalEventFor(iso, v) {
+  if (!v) return null;
+  const base = {calendarId: "primary", timeZone: TZ, notificationLevel: "NONE", description: "Creado desde App Registro de Cargas", useDefaultReminders: false};
+  if (v.off) return {...base, summary: "Día libre", allDay: true, startTime: iso + "T00:00:00", endTime: isoAdd(iso, 1) + "T00:00:00"};
+  const kind = v.shift === "M" ? "mañana" : v.shift === "T" ? "tarde" : v.shift === "N" ? "noche" : "";
+  const code = v.code || (v.tele ? shiftCfg().teleDefault : "") || "";
+  const def = code ? shiftDef(code) : null;
+  const kindTxt = kind || (code ? {M: "mañana", T: "tarde", N: "noche"}[code[0]] || "" : "");
+  const summary = (v.tele ? "Teletrabajo · " : "") + (kindTxt ? "Turno de " + kindTxt : "Turno") + (code ? " " + code : "");
+  if (def?.start && def?.end) return {...base, summary, startTime: `${iso}T${def.start}:00`, endTime: `${iso}T${def.end}:00`};
+  return {...base, summary, allDay: true, startTime: iso + "T00:00:00", endTime: isoAdd(iso, 1) + "T00:00:00"};
+}
+async function pushToGcal(days) {
+  if (!S.mcp) return 0;
+  const map = {...(S.gcalMap || {})}; let made = 0;
+  for (const [iso, v] of Object.entries(days)) {
+    if (map[iso]) { try { await S.mcp.callTool(CAL_SERVER, "delete_event", {calendarId: "primary", eventId: map[iso], notificationLevel: "NONE"}, {cache: false}); } catch (e) { if (e?.code !== "tool_error") throw e; } delete map[iso]; }
+    const ev = gcalEventFor(iso, v); if (!ev) continue;
+    const p = (await S.mcp.callTool(CAL_SERVER, "create_event", ev, {cache: false})).payload || {};
+    const id = p.id || p.event?.id || p.eventId || null; if (id) map[iso] = String(id); made++;
+  }
+  await S.db.doc("calendar/gcal").set({days: map});
+  return made;
+}
 async function saveOverrides(days) {
   const cur = {...(S.calOv || {})};
   for (const [d, v] of Object.entries(days)) { if (v) cur[d] = v; else delete cur[d]; }
   const min = isoAdd(todayISO(), -60); for (const d of Object.keys(cur)) if (d < min) delete cur[d];
-  try { await S.db.doc("calendar/overrides").set({days: cur}); toast("Calendario actualizado"); } catch { toast("No se pudo guardar el ajuste."); }
+  try { await S.db.doc("calendar/overrides").set({days: cur}); } catch { toast("No se pudo guardar el ajuste."); return; }
+  if (S.mcp && S.gcalWrite) {
+    S.calBusy = true; render();
+    try { const n = await pushToGcal(days); toast(n ? `Guardado y añadido a Google Calendar (${n} día${n > 1 ? "s" : ""})` : "Guardado; quitado de Google Calendar"); setTimeout(() => syncCalendar(false), 1500); }
+    catch (e) { toast("Guardado en la app, pero no en Google Calendar: " + calErrMsg(e)); }
+    S.calBusy = false; render();
+  } else toast("Calendario actualizado");
 }
 function readShiftForm() {
   const list = []; document.querySelectorAll('[id^="sh-c-"]').forEach(el => { const i = el.id.slice(5); const code = el.value.trim().toUpperCase(); if (!/^[MTN]\d{1,2}$/.test(code)) return; list.push({code, start: $("#sh-s-" + i).value, end: $("#sh-e-" + i).value}); });
@@ -1626,7 +1660,7 @@ document.addEventListener("input", ev => {
   else if (t.id === "sdate") { S.draft.date = t.value; saveDraftLocal(); }
   else if (t.id === "ask") { S.askDraft = t.value; t.style.height = "auto"; t.style.height = Math.min(160, t.scrollHeight) + "px"; }
 });
-document.addEventListener("change", ev => { if (ev.target.dataset?.shpick) { S.shPick = S.shPick || new Set(); ev.target.checked ? S.shPick.add(ev.target.dataset.shpick) : S.shPick.delete(ev.target.dataset.shpick); return; } if (ev.target.id === "coachImg") { addAttach([...ev.target.files]); ev.target.value = ""; return; } if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
+document.addEventListener("change", ev => { if (ev.target.id === "gcalWrite") { S.gcalWrite = ev.target.checked; lsSet("rc.gcalWrite", S.gcalWrite); render(); return; } if (ev.target.dataset?.shpick) { S.shPick = S.shPick || new Set(); ev.target.checked ? S.shPick.add(ev.target.dataset.shpick) : S.shPick.delete(ev.target.dataset.shpick); return; } if (ev.target.id === "coachImg") { addAttach([...ev.target.files]); ev.target.value = ""; return; } if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
 document.addEventListener("paste", ev => { if (ev.target.id !== "ask" || !imagesOk()) return; const imgs = [...(ev.clipboardData?.files || [])].filter(f => f.type.startsWith("image/")); if (imgs.length) { ev.preventDefault(); addAttach(imgs); } });
 document.addEventListener("toggle", ev => { if (ev.target.id === "prevDetails") lsSet("rc.prevOpen", ev.target.open); }, true);
 document.addEventListener("keydown", ev => { if (ev.target.id === "ask" && ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); send(ev.target.value); } });
@@ -1646,6 +1680,7 @@ if (!HOSTED && "serviceWorker" in navigator && location.protocol === "https:") a
   const err = () => {};
   db.collection("videos").onSnapshot(s => { S.videos = {}; s.docs.forEach(d => S.videos[d.id] = d.data()); soon(); }, err);
   db.doc("calendar/main").onSnapshot(s => { S.cal = s.exists ? s.data() : null; S.calLoaded = true; autoPlace(); soon(); maybeAutoSync(); }, err);
+  db.doc("calendar/gcal").onSnapshot(s => { S.gcalMap = s.exists ? (s.data().days || {}) : {}; soon(); }, err);
   db.doc("calendar/overrides").onSnapshot(s => { S.calOv = s.exists ? (s.data().days || {}) : {}; autoPlace(); soon(); }, err);
   db.collection("daily").orderBy("date", "desc").limit(400).onSnapshot(s => { S.daily = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); }, err);
   db.collection("plan").onSnapshot(s => { S.plans = {}; s.docs.forEach(d => S.plans[d.id] = d.data()); soon(); }, err);

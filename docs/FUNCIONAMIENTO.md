@@ -33,6 +33,7 @@ Los datos son documentos JSON organizados por colecciones:
 | `videos/<nombre-normalizado>` | Vídeos de un ejercicio: `n`, `items[]` → `{id, kind, label, url, fileId, asset, title, addedAt}` |
 | `chat/main` | Últimos 40 mensajes del entrenador |
 | `calendar/main` | Última sincronización con Google Calendar: `syncedAt`, `calendars[]`, `calNames`, `from`, `to`, `days` → `{AAAA-MM-DD: {shift: "M"/"T"/"N"/null, code: "M1"…/null, tele, off, weigh, titles[]}}` |
+| `calendar/gcal` | Eventos creados por la app en Google Calendar: `days` → `{AAAA-MM-DD: idDelEvento}`. Solo esos se borran o sustituyen al cambiar un ajuste. |
 | `calendar/overrides` | Ajustes manuales por día: `days` → `{AAAA-MM-DD: {shift, tele, off}}`. Se conservan los de los últimos 60 días en adelante. |
 
 **Campos de un ejercicio del plan:**
