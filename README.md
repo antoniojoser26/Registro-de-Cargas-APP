@@ -88,6 +88,13 @@ El modelo por defecto es `claude-sonnet-5-5`. Puedes cambiarlo en el mismo apart
 
 Se importan los últimos 120 días. Puedes repetirlo cuando quieras; los días ya importados se actualizan.
 
+## Escaneos EVOLT 360
+
+La pestaña **EVOLT** lee el PDF de resultados de la báscula EVOLT 360 del gimnasio y lo explica en sencillo: puntuación BWI y edad biológica, músculo, grasa (subcutánea y visceral), agua, análisis por zonas con equilibrio izquierda-derecha, gasto energético y la recomendación de calorías y macros. Muestra los cambios respecto al escaneo anterior, guarda peso, % de grasa y músculo en **Progreso** y el entrenador IA tiene en cuenta todos los datos.
+
+- Dentro de Claude: guarda el PDF en tu carpeta de Google Drive y pulsa «Buscar en Drive» (los nuevos se importan solos).
+- En la versión de GitHub: «Importar PDF» desde el dispositivo (se lee con PDF.js en el navegador; si algún dato no cuadra y tienes clave de API, Claude completa la lectura).
+
 ## Calendario
 
 La app asocia los días de la rutina a los días de la semana: Día 1 = lunes, Día 2 = martes… Día 5 = viernes. Sábado y domingo son de descanso, aunque puedes registrar cualquier día manualmente.

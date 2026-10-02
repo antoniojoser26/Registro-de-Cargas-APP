@@ -124,6 +124,18 @@ La pestaña **Agenda** muestra el mes completo, de lunes a domingo, con tu turno
 
 Muestra el historial completo. Toca una sesión para ver el detalle o borrarla.
 
+## 6 bis. EVOLT
+
+Tu hoja de resultados de la báscula EVOLT 360, explicada:
+
+- **Arriba**: puntuación BWI (8-8,9 óptimo, 9-10 atlético), edad biológica y las cuatro cifras clave (peso, % de grasa, músculo esquelético y nivel de grasa visceral) con el cambio desde el escaneo anterior.
+- **En resumen**: cuántos valores están en rango, qué ha cambiado y qué zonas se salen del rango.
+- **Músculo y Grasa**: cada dato con una explicación de una línea y una barra que marca tu rango óptimo (verde) y dónde estás tú.
+- **Por zonas**: músculo y grasa de brazos, tronco y piernas, y si estás equilibrado entre lado izquierdo y derecho.
+- **Agua, Energía y comida, Cintura**: agua dentro y fuera de las células, gasto en reposo y total, y lo que EVOLT te recomienda comer frente a tus objetivos del Perfil.
+
+**Importar**: guarda el PDF en tu carpeta de Google Drive y pulsa «Buscar en Drive», o usa «Importar PDF» desde el dispositivo. Cada escaneo también añade una medición a **Progreso** (fuente EVOLT). Pulsa «Pregunta al entrenador por este escaneo» para que te lo comente.
+
 ## 7. Entrenador
 
 - Escribe una pregunta o usa una de las sugerencias.

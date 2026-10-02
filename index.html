@@ -164,7 +164,7 @@ details.sess summary::-webkit-details-marker{display:none}
 
 /* nav */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));z-index:5}
-nav.tabs .in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0}
+nav.tabs .in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:0}
 nav.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-radius:8px;color:var(--muted);font-size:10px;letter-spacing:-.01em;font-weight:600;white-space:nowrap;min-width:0;overflow:hidden}
 nav.tabs button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 nav.tabs button[aria-current="page"]{color:var(--accent)}
@@ -408,6 +408,43 @@ nav.tabs button[aria-current="page"] svg{stroke:var(--accent);stroke-width:2.2}
 .extable{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);border-collapse:separate;overflow:hidden;border-spacing:0}
 .extable td{padding-left:16px;padding-right:16px}
 .day-h h2{flex:1;min-width:0}
+
+/* EVOLT */
+.evhero{display:flex;gap:16px;align-items:center;background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+.evscore{position:relative;width:96px;height:96px;flex:0 0 96px}
+.evring{width:96px;height:96px}
+.evin{position:absolute;inset:0;display:flex;align-items:baseline;justify-content:center;padding-top:30px}
+.evin b{font-family:var(--f-display);font-size:28px;font-weight:700}.evin small{font-size:13px;color:var(--muted);font-weight:600}
+.evbig{font-family:var(--f-display);font-size:24px;font-weight:700;margin:2px 0}
+.evsum{margin-top:12px}.evsum ul{margin:0;padding-left:18px;display:grid;gap:6px;line-height:1.5}
+.evlist{padding-block:4px}
+.evrow{padding:12px 0;border-bottom:1px solid var(--line)}.evrow:last-child{border-bottom:0}
+.evh{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.evv{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
+.evv .num{font-family:var(--f-display);font-size:22px;font-weight:700}.evv small{color:var(--muted);font-weight:600;margin-right:6px}
+.evbar{position:relative;height:8px;border-radius:99px;background:var(--sunk);margin-top:12px}
+.evbar .zone{position:absolute;top:0;bottom:0;background:var(--good-soft);border-radius:99px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--good) 35%,transparent)}
+.evbar .dot{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;transform:translate(-50%,-50%);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);background:var(--good)}
+.evbar .dot.warn{background:var(--warn)}.evbar .dot.up{background:var(--plate-red)}.evbar .dot.keep{background:var(--muted)}
+.evscale{position:relative;height:16px;font-size:11px;color:var(--muted)}.evscale i{position:absolute;font-style:normal;transform:translateX(-50%);top:2px}
+.evlevels{display:grid;grid-template-columns:repeat(15,1fr);gap:3px;margin-top:10px}
+.evlevels span{height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;opacity:.35}
+.evlevels .o{background:var(--good)}.evlevels .b{background:var(--plate-green)}.evlevels .x{background:var(--plate-red)}
+.evlevels .on{opacity:1;transform:scaleY(1.25);box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.evlevels .b{background:#7CC9A0}
+.evsplit{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;padding-top:10px}
+.evsplit b.num{font-family:var(--f-display);font-size:20px}
+.evbody{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.evzone{background:var(--sunk);border-radius:16px;padding:10px 12px;display:grid;gap:3px}
+.evzone.tr{grid-column:1/-1}
+.evwater{display:flex;border-radius:12px;overflow:hidden;font-size:12px;font-weight:600;color:#fff}
+.evwater span{padding:10px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.evwater span:first-child{background:var(--plate-blue)}.evwater span:last-child{background:#7FA8FF}
+.evmac{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.evmac>div{background:var(--sunk);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;border-left:4px solid var(--kc,var(--plate-green))}
+.evmac b{font-family:var(--f-display);font-size:17px}.evmac small{color:var(--muted);font-size:12px}
+nav.tabs{padding-left:4px;padding-right:4px}
+nav.tabs button{font-size:10px;letter-spacing:-.02em}
 </style>
 
 </head>
@@ -467,6 +504,7 @@ const S = {
   mcp: null, assets: null, videos: {}, vPlace: "gym", vAdd: null, vMode: "drive", driveFiles: null, driveState: "idle", driveErr: "", uploading: false,
   daily: [], nutMetric: "kcal", importing: "",
   editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, gcalWrite: lsGet("rc.gcalWrite") !== false, gcalMap: {}, showIdeas: false, attach: [], attachUrls: [], imgCaps: null, exporting: "", exportBusy: false,
+  evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
   apiKey: lsGet("rc.apikey") || "", apiModel: lsGet("rc.model") || ""
 };
 
@@ -476,6 +514,7 @@ const TABS = [
   ["vid", "Vídeos", '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/>'],
   ["cal", "Agenda", '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'],
   ["prog", "Progreso", '<path d="M4 19h16"/><path d="M5 15l4-5 4 3 6-7"/>'],
+  ["evolt", "EVOLT", '<circle cx="12" cy="5.5" r="2"/><path d="M12 8v6M8.5 10.5h7M10 21l2-7 2 7"/><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/>'],
   ["coach", "Coach", '<path d="M5 18l-1 3 4-2h9a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v9"/><path d="M9 10h6M9 13h4"/>'],
   ["me", "Perfil", '<circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/>']
 ];
@@ -587,7 +626,7 @@ function renderTabs() {
 function render() {
   renderTabs(); renderFab();
   const banner = S.dbState === "off" ? `<div class="banner">Abre esta app dentro de Claude para guardar y ver tus datos. Ahora mismo no se pueden leer ni guardar.</div>` : "";
-  const v = {log: viewLog, plan: viewPlan, vid: viewVid, cal: viewCal, prog: viewProg, coach: viewCoach, me: viewMe}[S.tab]();
+  const v = {log: viewLog, plan: viewPlan, vid: viewVid, cal: viewCal, prog: viewProg, evolt: viewEvolt, coach: viewCoach, me: viewMe}[S.tab]();
   $("#app").innerHTML = banner + v;
   if (S.tab === "coach") { const c = $("#chatEnd"); c && c.scrollIntoView({block: "end"}); }
   if (S.tab === "log") { const dp = $(".daypick"), b = dp && dp.querySelector('[aria-pressed="true"]'); if (b) dp.scrollLeft = Math.max(0, b.offsetLeft - dp.offsetLeft - 16); }
@@ -1342,6 +1381,257 @@ function viewProg() {
     ${viewGoals()}${bodySec}${viewNut()}<section><h2 style="margin-bottom:10px">Cargas por ejercicio</h2>${exSec}</section><section><h2 style="margin-bottom:6px">Sesiones</h2><div class="panel" style="padding-block:4px">${sess}</div></section>`;
 }
 
+/* Lector de la hoja de resultados EVOLT 360. El PDF trae los valores sin etiquetas, en el orden de la hoja
+   (fila a fila, de izquierda a derecha); se reconocen por su forma y su posición dentro de cada tipo. */
+function parseEvolt(raw) {
+  let t = String(raw || "").replace(/\\/g, "").replace(/ /g, " ");
+  const cut = t.search(/EXPLICADOS|EXPLAINED/i); if (cut > 0) t = t.slice(0, cut);
+  const n = x => x == null ? null : +x;
+  const out = {};
+  let m;
+  if ((m = t.match(/(\d{2})[-/.](\d{2})[-/.](\d{4})\s+(\d{1,2}):(\d{2})/))) { out.date = `${m[3]}-${m[2]}-${m[1]}`; out.time = `${m[4].padStart(2, "0")}:${m[5]}`; }
+  if ((m = t.match(/(\d{3}(?:\.\d)?)\s*cm\s+(\d{2,3}(?:\.\d+)?)\s*kg\s+(\d{1,3})\s+(Male|Female|Hombre|Mujer)/i))) { out.height = n(m[1]); out.weight = n(m[2]); out.age = n(m[3]); out.gender = /^(female|mujer)/i.test(m[4]) ? "Mujer" : "Hombre"; }
+  const T1 = [...t.matchAll(/(\d+(?:\.\d+)?)(%?)\s*\/\s*([A-Z][a-z]+(?: [A-Z][a-z]+)?)(?:\s*\[\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*\])?/g)]
+    .map(x => ({v: n(x[1]), st: x[3], min: x[4] != null ? n(x[4]) : null, max: x[5] != null ? n(x[5]) : null}));
+  const T2 = [...t.matchAll(/(\d+(?:\.\d+)?)\s*\[\s*(\d+(?:\.\d+)?)\s*%\s*\]/g)].map(x => ({v: n(x[1]), pct: n(x[2])}));
+  const T3 = [...t.matchAll(/(\d{3,5})\s*kcal/gi)].map(x => n(x[1]));
+  // Cuadrícula principal: fila 1 (magra, grasa, nivel visceral), 2 (músculo), 3 (proteína), 4 (minerales, área visceral), 5 (agua, % grasa)
+  const main = ["lbm", "bfm", "vfl", "smm", "protein", "minerals", "vfa", "tbw", "bfp"];
+  if (T1.length >= 9) main.forEach((k, i) => out[k] = T1[i]);
+  if (out.vfl) out.vfl = {v: out.vfl.v, st: out.vfl.st};
+  const seg = T1.slice(9);
+  if (seg.length >= 11) {
+    const [la, laf, ra, raf, tr, trf, whr, ll, llf, rl, rlf] = seg;
+    out.seg = {la: {lean: la, fat: laf}, ra: {lean: ra, fat: raf}, tr: {lean: tr, fat: trf}, ll: {lean: ll, fat: llf}, rl: {lean: rl, fat: rlf}};
+    out.whr = whr;
+  }
+  if (T2.length >= 4) { out.subq = T2[0]; out.icf = T2[1]; out.visMass = T2[2]; out.ecf = T2[3]; }
+  if (T3.length >= 2) { out.bmr = T3[0]; out.tee = T3[1]; }
+  if ((m = t.match(/(\d{2,3}(?:\.\d+)?)\s*cm\s*\(\s*(?:Less than|Menos de)\s*(\d+(?:\.\d+)?)/i))) out.waist = {v: n(m[1]), max: n(m[2])};
+  if ((m = t.match(/(?:^|\s)(\d{1,3})\s+(\d{1,2}\.\d)\s*\/?\s*10(?!\d|\.)/))) { out.bioAge = n(m[1]); out.bwi = n(m[2]); }
+  else if ((m = t.match(/(?:^|\s)(\d{1,2}\.\d)\s*\/?\s*10(?!\d|\.)/))) out.bwi = n(m[1]);
+  if ((m = t.match(/(\d{3,4})\s*-\s*(\d{3,4})(?!\s*g)(?!\d)/))) out.kcal = [n(m[1]), n(m[2])];
+  const mac = [...t.matchAll(/(\d{1,4})\s*g\s*-\s*(\d{1,4})\s*g\s*\(\s*(\d{1,3})\s*%\s*\)/g)].map(x => [n(x[1]), n(x[2]), n(x[3])]);
+  if (mac.length >= 3) { out.protein_g = mac[0]; out.carbs_g = mac[1]; out.fat_g = mac[2]; }
+  return out;
+}
+/* Comprobaciones de coherencia: si algo no cuadra, se pide ayuda a Claude para leer el texto. */
+const EVOLT_REQ = ["date", "weight", "lbm", "bfm", "smm", "bfp", "tbw"];
+function evoltProblems(e) {
+  const p = EVOLT_REQ.filter(k => e[k] == null);
+  if (p.length) return p;
+  if (Math.abs(e.lbm.v + e.bfm.v - e.weight) > 0.6) p.push("magra + grasa ≠ peso");
+  if (Math.abs(e.bfm.v / e.weight * 100 - e.bfp.v) > 1.2) p.push("% grasa");
+  if (!(e.smm.v < e.lbm.v && e.tbw.v < e.lbm.v)) p.push("orden de valores");
+  return p;
+}
+
+const EV_ST = {Optimal: ["Óptimo", "good"], Balanced: ["Equilibrado", "good"], Normal: ["Normal", "good"], High: ["Alto", "warn"], Low: ["Bajo", "warn"], Over: ["Alto", "warn"], Under: ["Bajo", "warn"], "Very High": ["Muy alto", "up"], "Very Low": ["Muy bajo", "up"], Excess: ["Exceso", "up"]};
+const evSt = s => EV_ST[s] || [s || "—", "keep"];
+const EV_INFO = {
+  smm: ["Músculo esquelético", "kg", "El músculo que entrenas. Es el dato clave para saber si ganas músculo."],
+  lbm: ["Masa magra", "kg", "Todo lo que no es grasa: músculo, órganos, huesos y agua."],
+  protein: ["Proteína corporal", "kg", "Proteína guardada en tus tejidos; sube cuando ganas músculo."],
+  minerals: ["Minerales", "kg", "Estimación de los minerales de tus huesos."],
+  tbw: ["Agua total", "kg", "Agua dentro y fuera de tus células. Lo normal es un 45-65 % del peso."],
+  bfm: ["Masa grasa", "kg", "Los kilos de grasa de tu cuerpo (bajo la piel + alrededor de los órganos)."],
+  bfp: ["Grasa corporal", "%", "Qué parte de tu peso es grasa."],
+  vfa: ["Área de grasa visceral", "cm²", "Grasa alrededor de los órganos. En hombres lo óptimo es 50-100 cm²."]
+};
+const EV_ZONES = [["la", "Brazo izquierdo"], ["ra", "Brazo derecho"], ["tr", "Tronco"], ["ll", "Pierna izquierda"], ["rl", "Pierna derecha"]];
+const bwiLabel = v => v >= 9 ? ["Atlético", "good"] : v >= 8 ? ["Óptimo", "good"] : v >= 7 ? ["Medio", "keep"] : v >= 6 ? ["Por debajo de la media", "warn"] : ["Bajo", "up"];
+const vflLabel = v => v <= 5 ? ["Óptimo", "good"] : v <= 9 ? ["Equilibrado", "good"] : ["En exceso", "up"];
+const evScans = () => [...(S.evolt || [])].sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.time || "").localeCompare(a.time || ""));
+
+function evBar(o, dec = 1) {
+  if (!o || o.min == null || o.max == null || o.v == null) return "";
+  const span = (o.max - o.min) || 1, lo = Math.min(o.min - span * 0.7, o.v - span * 0.1), hi = Math.max(o.max + span * 0.7, o.v + span * 0.1);
+  const pos = v => Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100));
+  return `<div class="evbar" aria-hidden="true"><span class="zone" style="left:${pos(o.min)}%;width:${pos(o.max) - pos(o.min)}%"></span><span class="dot ${evSt(o.st)[1]}" style="left:${pos(o.v)}%"></span></div>
+    <div class="evscale" aria-hidden="true"><i style="left:${pos(o.min)}%">${fmtN(o.min, dec)}</i><i style="left:${pos(o.max)}%">${fmtN(o.max, dec)}</i></div>`;
+}
+function evRow(e, k, dec = 1) {
+  const o = e[k]; if (!o) return ""; const [lbl, u, why] = EV_INFO[k]; const [st, cls] = evSt(o.st);
+  return `<div class="evrow"><div class="evh"><div><b>${lbl}</b><div class="small muted">${why}</div></div>
+    <div class="evv"><span class="num">${fmtN(o.v, dec)}</span><small>${u}</small><span class="pill ${cls}">${st}</span></div></div>
+    ${evBar(o, dec)}</div>`;
+}
+/* Escaneo EVOLT anterior (el de la app o, si no hay, la medición de EVOLT guardada en Composición corporal). */
+function evPrev(e) {
+  const prev = evScans().find(x => x.date < e.date);
+  if (prev) return {date: prev.date, weight: prev.weight, fat: prev.bfp?.v, muscle: prev.smm?.v, full: prev};
+  const b = [...S.body].filter(x => /evolt/i.test(x.source || "") && x.date < e.date).sort((a, c) => c.date.localeCompare(a.date))[0];
+  return b ? {date: b.date, weight: b.weight, fat: b.fat, muscle: b.muscle} : null;
+}
+function evSummary(e) {
+  const out = [], pv = evPrev(e);
+  const vals = ["lbm", "smm", "protein", "minerals", "tbw", "bfm", "bfp", "vfa"].map(k => e[k]).filter(Boolean);
+  const okN = vals.filter(o => evSt(o.st)[1] === "good").length;
+  out.push(`<b>${okN} de ${vals.length}</b> valores de composición están en tu rango óptimo.`);
+  if (pv) {
+    const d = (a, b) => a != null && b != null ? a - b : null, sg = (x, dec = 1) => (x > 0 ? "+" : "") + fmtN(x, dec);
+    const dw = d(e.weight, pv.weight), df = d(e.bfp?.v, pv.fat), dm = d(e.smm?.v, pv.muscle), parts = [];
+    if (dw != null) parts.push(`${sg(dw)} kg de peso`); if (df != null) parts.push(`${sg(df)} puntos de grasa`); if (dm != null) parts.push(`${sg(dm)} kg de músculo`);
+    if (parts.length) out.push(`Desde el escaneo del ${fmtDate(pv.date, {day: "numeric", month: "long"})}: ${parts.join(", ")}.${df != null && dm != null ? (df < 0 && dm >= -0.2 ? " Pierdes grasa conservando el músculo: vas bien." : df < 0 ? " Bajas grasa, pero vigila el músculo (proteína y cargas)." : dm > 0 ? " Ganas músculo." : "") : ""}`);
+  }
+  const highs = EV_ZONES.flatMap(([z, l]) => ["lean", "fat"].map(t => ({z, l, t, o: e.seg?.[z]?.[t]}))).filter(x => x.o && evSt(x.o.st)[1] !== "good");
+  if (highs.length) out.push(`Fuera de rango por zonas: ${highs.map(x => `${x.t === "fat" ? "grasa" : "músculo"} del ${x.l.toLowerCase()} (${fmtN(x.o.v, 2)} kg, ${evSt(x.o.st)[0].toLowerCase()}; óptimo ${fmtN(x.o.min, 2)}–${fmtN(x.o.max, 2)})`).join(" y ")}. Es poca diferencia y baja con el déficit y el entrenamiento.`);
+  if (e.vfl) out.push(`Grasa visceral nivel <b>${e.vfl.v}</b>: ${vflLabel(e.vfl.v)[0].toLowerCase()} (1-5 óptimo, 6-9 equilibrado, 10 o más en exceso).`);
+  if (e.bioAge != null && e.age != null) out.push(e.bioAge < e.age ? `Tu edad biológica (${e.bioAge}) es menor que tu edad real (${e.age}).` : e.bioAge === e.age ? `Tu edad biológica coincide con tu edad real (${e.age} años).` : `Tu edad biológica (${e.bioAge}) es mayor que tu edad real (${e.age}): mejora con más músculo y menos grasa.`);
+  return out;
+}
+function viewEvolt() {
+  const scans = evScans(), trainer = S.profile?.trainer;
+  const head = `<div class="top"><div><div class="eyebrow">Báscula EVOLT 360${trainer ? " · con " + esc(trainer.split(" (")[0]) : ""}</div><h1>EVOLT</h1></div></div>`;
+  const imp = evImportPanel(!scans.length);
+  if (!scans.length) return head + `<div class="panel stack"><p>Aquí verás explicados, en sencillo, los resultados de cada escaneo EVOLT: músculo, grasa, grasa visceral, agua, análisis por zonas y lo que te recomienda comer.</p><p class="small muted">Sube el PDF que te da la máquina a tu carpeta de Google Drive y pulsa «Buscar en Drive».</p></div>${imp}`;
+  if (!S.evSel || !scans.some(x => x.id === S.evSel)) S.evSel = scans[0].id;
+  const e = scans.find(x => x.id === S.evSel), pv = evPrev(e);
+  const pick = scans.length > 1 ? `<div class="chips" style="margin-bottom:12px">${scans.map(x => `<button class="chip" data-evsel="${esc(x.id)}" aria-pressed="${x.id === e.id}">${fmtDate(x.date, {day: "numeric", month: "short", year: "2-digit"})}</button>`).join("")}</div>` : "";
+  const [bl, bc] = e.bwi != null ? bwiLabel(e.bwi) : ["—", "keep"];
+  const ring = (v, max, col) => { const r = 34, c = 2 * Math.PI * r, f = Math.max(0, Math.min(1, v / max)); return `<svg viewBox="0 0 84 84" class="evring" aria-hidden="true"><circle cx="42" cy="42" r="${r}" fill="none" stroke="var(--sunk)" stroke-width="9"/><circle cx="42" cy="42" r="${r}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c * f} ${c}" transform="rotate(-90 42 42)"/></svg>`; };
+  const hero = `<div class="evhero">
+    <div class="evscore">${ring(e.bwi || 0, 10, "var(--plate-green)")}<div class="evin"><b class="num">${e.bwi != null ? Number(e.bwi).toFixed(1).replace(".", ",") : "—"}</b><small>/10</small></div></div>
+    <div style="min-width:0"><div class="eyebrow">Puntuación de bienestar (BWI)</div><div class="evbig">${bl}</div>
+      <div class="small muted">Mide la calidad de tu composición: 8-8,9 óptimo, 9-10 atlético.</div>
+      ${e.bioAge != null ? `<div class="small" style="margin-top:6px">Edad biológica <b>${e.bioAge}</b>${e.age != null ? ` · edad real ${e.age}` : ""}</div>` : ""}</div></div>`;
+  const dlt = (cur, old, goodDown, dec = 1) => { if (cur == null || old == null) return ["&nbsp;", "neu"]; const d = cur - old; return [(d > 0 ? "+" : "") + fmtN(d, dec) + (Math.abs(d) < 0.05 ? "" : ""), Math.abs(d) < 0.05 ? "neu" : (d < 0) === goodDown ? "pos" : "neg"]; };
+  const kpi = (lbl, v, u, [d, cls], color) => `<div class="kpi" style="--kc:${color}"><div class="eyebrow">${lbl}</div><div class="v">${v}<small>${u}</small></div><div class="d ${cls}">${d}</div></div>`;
+  const kpis = `<div class="kpis">${kpi("Peso", fmtN(e.weight), "kg", dlt(e.weight, pv?.weight, true), "var(--plate-blue)")}${kpi("Grasa", fmtN(e.bfp?.v), "%", dlt(e.bfp?.v, pv?.fat, true), "var(--plate-red)")}${kpi("Músculo", fmtN(e.smm?.v), "kg", dlt(e.smm?.v, pv?.muscle, false), "var(--plate-green)")}${kpi("Visceral", e.vfl ? e.vfl.v : "—", "nivel", [e.vfl ? vflLabel(e.vfl.v)[0] : "&nbsp;", "neu"], "var(--plate-purple)")}</div>
+    ${pv ? `<p class="small muted" style="margin-top:6px">Cambios respecto al escaneo del ${fmtDate(pv.date, {day: "numeric", month: "long"})}.</p>` : ""}`;
+  const sum = `<div class="panel evsum"><div class="eyebrow" style="margin-bottom:6px">En resumen</div><ul>${evSummary(e).map(x => `<li>${x}</li>`).join("")}</ul>
+    <div class="row" style="margin-top:10px"><button class="btn primary" data-act="evAsk" ${coachReady() ? "" : "disabled"}>Pregunta al entrenador por este escaneo</button></div></div>`;
+  const comp = `<section><h2>Músculo</h2><div class="panel evlist">${["smm", "lbm", "protein", "minerals", "tbw"].map(k => evRow(e, k)).join("")}</div></section>
+    <section><h2>Grasa</h2><div class="panel evlist">${["bfp", "bfm"].map(k => evRow(e, k)).join("")}${evRow(e, "vfa", 0)}
+      <div class="evrow"><div class="evh"><div><b>Nivel de grasa visceral</b><div class="small muted">Escala de 1 a 20 de la grasa que rodea los órganos.</div></div><div class="evv"><span class="num">${e.vfl?.v ?? "—"}</span>${e.vfl ? `<span class="pill ${vflLabel(e.vfl.v)[1]}">${vflLabel(e.vfl.v)[0]}</span>` : ""}</div></div>
+        ${e.vfl ? `<div class="evlevels" aria-hidden="true">${Array.from({length: 15}, (_, i) => `<span class="${i + 1 <= 5 ? "o" : i + 1 <= 9 ? "b" : "x"}${i + 1 === e.vfl.v ? " on" : ""}">${i + 1 === e.vfl.v ? e.vfl.v : ""}</span>`).join("")}</div><div class="small muted" style="margin-top:4px">1-5 óptimo · 6-9 equilibrado · 10+ en exceso</div>` : ""}</div>
+      <div class="evsplit">${e.subq ? `<div><div class="eyebrow">Bajo la piel</div><b class="num">${fmtN(e.subq.v)} kg</b><div class="small muted">${fmtN(e.subq.pct)} % del peso</div></div>` : ""}${e.visMass ? `<div><div class="eyebrow">Visceral</div><b class="num">${fmtN(e.visMass.v)} kg</b><div class="small muted">${fmtN(e.visMass.pct)} % del peso</div></div>` : ""}</div></div></section>`;
+  const zone = (z, l) => { const o = e.seg?.[z]; if (!o) return ""; const c = x => x ? `<span class="num">${fmtN(x.v, 2)}</span> kg <span class="pill ${evSt(x.st)[1]}">${evSt(x.st)[0]}</span>` : "—";
+    return `<div class="evzone ${z}"><div class="eyebrow">${l}</div><div class="small">Músculo ${c(o.lean)}</div><div class="small">Grasa ${c(o.fat)}</div></div>`; };
+  const bal = (a, b) => a && b ? Math.abs(a.v - b.v) / Math.max(a.v, b.v) * 100 : null;
+  const ba = bal(e.seg?.la?.lean, e.seg?.ra?.lean), bg = bal(e.seg?.ll?.lean, e.seg?.rl?.lean);
+  const segs = e.seg ? `<section><h2>Por zonas</h2><div class="panel"><div class="evbody">${EV_ZONES.map(([z, l]) => zone(z, l)).join("")}</div>
+    <p class="small" style="margin-top:10px">Equilibrio izquierda-derecha: brazos ${fmtN(ba, 1)} % de diferencia, piernas ${fmtN(bg, 1)} %. ${Math.max(ba || 0, bg || 0) < 5 ? "Estás <b>equilibrado</b> (menos de un 5 %)." : "Hay un lado algo más fuerte: trabaja ejercicios a una mano o pierna empezando por el lado débil."}</p></div></section>` : "";
+  const water = e.icf && e.ecf ? `<section><h2>Agua</h2><div class="panel"><div class="evwater"><span style="width:${e.icf.pct}%">Dentro de las células ${fmtN(e.icf.pct, 0)} %</span><span style="width:${e.ecf.pct}%">Fuera ${fmtN(e.ecf.pct, 0)} %</span></div>
+    <p class="small muted" style="margin-top:8px">${fmtN(e.icf.v)} kg dentro y ${fmtN(e.ecf.v)} kg fuera. Lo habitual es cerca de 62/38: más agua dentro de las células suele ir con más músculo y buena hidratación.</p></div></section>` : "";
+  const macroP = (S.profile?.macros || []).find(m => /prote/i.test(m.name))?.target, macroK = (S.profile?.macros || []).find(m => /calor/i.test(m.name))?.target;
+  const rg = a => a ? `${fmtN(a[0], 0)}–${fmtN(a[1], 0)} g` : "—";
+  const energy = `<section><h2>Energía y comida</h2><div class="panel">
+    <div class="evsplit"><div><div class="eyebrow">En reposo (BMR)</div><b class="num">${fmtN(e.bmr, 0)} kcal</b><div class="small muted">Lo que gastas sin moverte.</div></div><div><div class="eyebrow">Gasto total (TEE)</div><b class="num">${fmtN(e.tee, 0)} kcal</b><div class="small muted">Con tu actividad diaria.</div></div></div>
+    ${e.kcal ? `<div class="eyebrow" style="margin-top:14px">EVOLT te recomienda al día</div>
+    <div class="evmac"><div><b class="num">${fmtN(e.kcal[0], 0)}–${fmtN(e.kcal[1], 0)}</b><small>kcal</small></div><div style="--kc:var(--plate-blue)"><b class="num">${rg(e.protein_g)}</b><small>proteína</small></div><div style="--kc:var(--plate-yellow)"><b class="num">${rg(e.carbs_g)}</b><small>hidratos</small></div><div style="--kc:var(--plate-red)"><b class="num">${rg(e.fat_g)}</b><small>grasas</small></div></div>
+    ${macroK || macroP ? `<p class="small" style="margin-top:8px">Tus objetivos en Perfil: ${[macroK, macroP ? macroP + " de proteína" : ""].filter(Boolean).map(esc).join(" · ")}.</p>` : ""}` : ""}
+    ${e.tee && e.kcal ? `<p class="small muted" style="margin-top:6px">Comer ${fmtN(e.kcal[0], 0)}–${fmtN(e.kcal[1], 0)} kcal frente a un gasto de ${fmtN(e.tee, 0)} supone un déficit de unas ${fmtN(e.tee - e.kcal[1], 0)}–${fmtN(e.tee - e.kcal[0], 0)} kcal al día.</p>` : ""}</div></section>`;
+  const waist = e.waist || e.whr ? `<section><h2>Cintura</h2><div class="panel"><div class="evsplit">${e.waist ? `<div><div class="eyebrow">Perímetro abdominal</div><b class="num">${fmtN(e.waist.v)} cm</b><div class="small muted">Recomendado: menos de ${fmtN(e.waist.max, 0)} cm</div></div>` : ""}${e.whr ? `<div><div class="eyebrow">Cintura / cadera</div><b class="num">${fmtN(e.whr.v, 2)}</b> <span class="pill ${evSt(e.whr.st)[1]}">${evSt(e.whr.st)[0]}</span><div class="small muted">Óptimo ${fmtN(e.whr.min, 2)}–${fmtN(e.whr.max, 2)}</div></div>` : ""}</div></div></section>` : "";
+  const meta = `<p class="small muted" style="margin-top:14px">Escaneo del ${fmtDate(e.date, {weekday: "long", day: "numeric", month: "long", year: "numeric"})}${e.time ? " a las " + esc(e.time) : ""}${e.height ? ` · ${fmtN(e.height, 0)} cm` : ""}${e.age ? ` · ${e.age} años` : ""}${e.fileName ? ` · ${esc(e.fileName)}` : ""}${e.fileUrl ? ` · <a href="${esc(e.fileUrl)}" target="_blank" rel="noopener">ver PDF ↗</a>` : ""}.
+    EVOLT mide por bioimpedancia: compara siempre en condiciones parecidas (misma hora, sin entrenar antes, hidratado).</p>
+    <div class="row" style="margin-top:6px">${S.confirmDel === "ev:" + e.id ? `<button class="btn danger" data-delev="${esc(e.id)}">Borrar este escaneo</button>` : `<button class="editbtn" data-askdel="ev:${esc(e.id)}">Borrar escaneo</button>`}</div>`;
+  return head + pick + hero + kpis + sum + comp + segs + water + energy + waist + imp + meta;
+}
+function evImportPanel(open) {
+  const f = S.profile?.drive?.root, canDrive = S.mcp && f?.id, done = new Set((S.evolt || []).map(x => x.fileId).filter(Boolean));
+  const list = Array.isArray(S.evDrive) ? (S.evDrive.length ? `<div class="hist">${S.evDrive.map(x => `<div class="it"><div><b>${esc(x.title)}</b><div class="small muted">${x.date ? new Date(x.date).toLocaleString("es-ES", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : ""}</div></div>
+      <div>${done.has(x.id) ? `<span class="pill good">Importado</span>` : `<button class="btn primary" data-evimp="${esc(x.id)}" ${S.evBusy ? "disabled" : ""}>Importar</button>`}</div></div>`).join("")}</div>` : `<p class="small muted">No hay PDFs en la carpeta todavía.</p>`) : "";
+  return `<details class="panel" style="margin-top:14px" ${open || S.evOpen ? "open" : ""} id="evImp"><summary style="cursor:pointer;font-weight:600">Importar un escaneo EVOLT</summary>
+    <div class="stack" style="margin-top:10px">
+      ${canDrive ? `<p class="small">Guarda el PDF que te envía EVOLT en tu carpeta <b>${esc(f.name || "Registro de Cargas")}</b> de Google Drive (o en <b>Importaciones Samsung Health</b>) y pulsa «Buscar en Drive». Los PDF nuevos se importan solos al abrir esta pestaña.</p>
+      <div class="row"><button class="btn primary" data-act="evList" ${S.evBusy ? "disabled" : ""}>${S.evDrive === "loading" ? "Buscando…" : "Buscar en Drive"}</button>${f.url ? `<a class="btn ghost" style="text-decoration:none;display:inline-flex;align-items:center" href="${esc(f.url)}" target="_blank" rel="noopener">Abrir carpeta ↗</a>` : ""}</div>${list}` : ""}
+      <div class="stack" style="gap:8px;${canDrive ? "border-top:1px solid var(--line);padding-top:10px" : ""}"><div><b>Desde este dispositivo</b></div>
+        <div class="row"><input type="file" class="input" id="evfile" style="flex:1;min-width:200px"><button class="btn" data-act="evFile" ${S.evBusy ? "disabled" : ""}>Importar PDF</button></div></div>
+      <p class="small" id="evState">${esc(S.evMsg || "")}</p></div></details>`;
+}
+
+/* Lectura: Drive da el texto del PDF; fuera de Claude se extrae con PDF.js. Si las cuentas no cuadran, Claude lo interpreta. */
+function evDriveErr(e) { return driveErr(e).replace("leer tu Google Drive", "leer tus PDF de Google Drive"); }
+async function evList(auto) {
+  const d = S.profile?.drive; if (!S.mcp || !d?.root?.id) return;
+  if (!auto) { S.evDrive = "loading"; render(); }
+  try {
+    const parents = [d.root.id, d.imports?.id, d.evolt?.id].filter(Boolean).map(id => `parentId = '${id}'`).join(" or ");
+    const pl = (await S.mcp.callTool("Google Drive", "search_files", {query: `mimeType = 'application/pdf' and (${parents})`, pageSize: 50, excludeContentSnippets: true}, {cache: false})).payload || {};
+    S.evDrive = (pl.files || []).filter(x => x?.id).map(x => ({id: String(x.id), title: String(x.title || "escaneo.pdf"), url: String(x.viewUrl || ""), date: String(x.createdTime || x.modifiedTime || "")})).sort((a, b) => b.date.localeCompare(a.date));
+    if (auto) { const done = new Set((S.evolt || []).map(x => x.fileId)); for (const f of S.evDrive.filter(x => !done.has(x.id))) await evImportDrive(f.id, true); }
+  } catch (e) { S.evDrive = null; if (!auto) S.evMsg = evDriveErr(e); }
+  render();
+}
+let evAutoTried = false;
+async function evAuto() {
+  if (evAutoTried || !S.mcp || !S.profile?.drive?.root?.id) return; evAutoTried = true;
+  try { const perms = await claude.use("permissions"); const st = perms ? await perms.state("mcp:Google Drive") : null; if (st === "granted") evList(true); } catch {}
+}
+async function evAI(text) {
+  const keys = "date (AAAA-MM-DD), time, height, weight, age, gender, lbm, bfm, vfl, smm, protein, minerals, vfa, tbw, bfp, subq, visMass, icf, ecf, bmr, tee, bioAge, bwi, seg{la,ra,tr,ll,rl}{lean,fat}, whr, waist, kcal, protein_g, carbs_g, fat_g";
+  const prompt = `Este es el texto extraído del PDF de resultados de la báscula EVOLT 360. Los valores no tienen etiqueta: van en el orden de la hoja (fila a fila). Devuelve SOLO un objeto JSON con estas claves: ${keys}.
+Formato: los valores con estado son {"v":número,"st":"Optimal|High|Low|Balanced|...","min":número,"max":número}; subq, visMass, icf y ecf son {"v":kg,"pct":%}; vfl es {"v":nivel,"st":estado}; waist es {"v":cm,"max":cm}; kcal es [mín,máx]; protein_g, carbs_g y fat_g son [mín,máx,%]; el resto, números. Orden de la hoja: 1 masa magra, 6 masa grasa, 11 nivel visceral / 2 músculo esquelético, 7 grasa subcutánea, 12 ICF / 3 proteína, 8 masa grasa visceral, 13 ECF / 4 minerales, 9 área grasa visceral, 14 BMR / 5 agua total, 10 % grasa, 15 TEE. Zonas: brazo izq. (magra, grasa), brazo der., tronco, perímetro abdominal, cintura/cadera, pierna izq., pierna der. Si un dato no aparece, pon null.
+
+TEXTO:
+${text.slice(0, 6000)}`;
+  if (S.sample) return await S.sample.json(prompt, {cache: false});
+  if (!HOSTED && S.apiKey) { const out = await askAnthropic([{role: "user", content: prompt}]); const m = out.match(/\{[\s\S]*\}/); return m ? JSON.parse(m[0]) : null; }
+  return null;
+}
+async function evIngest(text, meta) {
+  let e = parseEvolt(text), probs = evoltProblems(e);
+  if (probs.length) {
+    S.evMsg = "Interpretando el PDF con Claude…"; render();
+    try { const ai = await evAI(text); if (ai && typeof ai === "object") { e = {...ai, ...Object.fromEntries(Object.entries(e).filter(([, v]) => v != null))}; probs = evoltProblems(e); } } catch {}
+  }
+  if (EVOLT_REQ.some(k => e[k] == null)) throw {code: "parse", message: "No he reconocido este PDF como una hoja de resultados de EVOLT 360."};
+  const id = e.date + (e.time ? "-" + e.time.replace(":", "") : "");
+  const doc = {...e, ...meta, importedAt: new Date().toISOString(), checks: probs};
+  await S.db.doc("evolt/" + id).set(JSON.parse(JSON.stringify(doc)));
+  // también a Composición corporal (peso, % grasa y músculo esquelético), sin duplicar
+  const ex = S.body.find(b => b.date === e.date && /evolt/i.test(b.source || ""));
+  const row = {date: e.date, weight: e.weight, fat: e.bfp?.v ?? null, muscle: e.smm?.v ?? null, source: "EVOLT", note: ex ? (ex.note || "") : "Importado del PDF de EVOLT"};
+  await S.db.doc("body/" + (ex ? ex.id : "evolt-" + e.date)).set(row);
+  S.evSel = id; return {id, probs};
+}
+async function evImportDrive(fileId, quiet) {
+  const f = (S.evDrive || []).find(x => x.id === fileId) || {};
+  S.evBusy = true; S.evMsg = `Leyendo ${f.title || "el PDF"}…`; if (!quiet) render();
+  try {
+    const pl = (await S.mcp.callTool("Google Drive", "read_file_content", {fileId}, {cache: false})).payload || {};
+    const text = String(pl.fileContent || pl.content || "");
+    if (!text.trim()) throw {code: "parse", message: "Drive no devolvió texto de ese PDF."};
+    const r = await evIngest(text, {fileId, fileName: f.title || String(pl.title || ""), fileUrl: f.url || String(pl.viewUrl || "")});
+    S.evMsg = ""; toast(r.probs.length ? "Escaneo importado: revisa los datos" : "Escaneo EVOLT importado");
+  } catch (e) { S.evMsg = e?.code === "parse" ? e.message : evDriveErr(e); }
+  S.evBusy = false; render();
+}
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  return new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    sc.onload = () => { try { pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; } catch {} ok(window.pdfjsLib); }; sc.onerror = () => ko(new Error("pdfjs")); document.head.append(sc); });
+}
+/* Texto en orden de lectura: agrupa los fragmentos por fila (misma altura) y los ordena de izquierda a derecha. */
+async function pdfText(file) {
+  const lib = await loadPdfJs(), pdf = await lib.getDocument({data: new Uint8Array(await file.arrayBuffer())}).promise; let out = "";
+  for (let i = 1; i <= Math.min(pdf.numPages, 2); i++) {
+    const items = (await (await pdf.getPage(i)).getTextContent()).items.filter(it => it.str && it.str.trim()).map(it => ({s: it.str, x: it.transform[4], y: it.transform[5]}));
+    items.sort((a, b) => b.y - a.y || a.x - b.x); const rows = [];
+    for (const it of items) { const r = rows.find(r => Math.abs(r.y - it.y) < 3); r ? r.items.push(it) : rows.push({y: it.y, items: [it]}); }
+    out += rows.sort((a, b) => b.y - a.y).map(r => r.items.sort((a, b) => a.x - b.x).map(x => x.s).join(" ")).join("\n") + "\n";
+  }
+  return out;
+}
+async function evImportFile() {
+  const file = $("#evfile")?.files?.[0]; if (!file) { toast("Elige el PDF de EVOLT."); return; }
+  S.evBusy = true; S.evMsg = "Leyendo el PDF…"; S.evOpen = true; render();
+  try { const text = await pdfText(file); const r = await evIngest(text, {fileName: file.name}); S.evMsg = ""; toast(r.probs.length ? "Escaneo importado: revisa los datos" : "Escaneo EVOLT importado"); }
+  catch (e) { S.evMsg = e?.code === "parse" ? e.message : e?.message === "pdfjs" ? "No se pudo cargar el lector de PDF. Comprueba la conexión." : "No se pudo leer ese archivo. ¿Es el PDF de EVOLT?"; }
+  S.evBusy = false; render();
+}
+function evoltContext() {
+  const sc = evScans(); if (!sc.length) return "";
+  const o = (x, d = 1) => x ? `${x.v}${x.st ? " (" + evSt(x.st)[0] + (x.min != null ? `, óptimo ${x.min}-${x.max}` : "") + ")" : ""}` : "—";
+  const e = sc[0];
+  const z = e.seg ? EV_ZONES.map(([k, l]) => `${l}: músculo ${o(e.seg[k]?.lean)} kg, grasa ${o(e.seg[k]?.fat)} kg`).join("; ") : "—";
+  return `Último escaneo ${e.date}${e.time ? " " + e.time : ""}: peso ${e.weight} kg; masa magra ${o(e.lbm)} kg; músculo esquelético ${o(e.smm)} kg; proteína ${o(e.protein)} kg; minerales ${o(e.minerals)} kg; agua total ${o(e.tbw)} kg (intracelular ${e.icf?.v ?? "—"} kg ${e.icf?.pct ?? "—"} %, extracelular ${e.ecf?.v ?? "—"} kg ${e.ecf?.pct ?? "—"} %); masa grasa ${o(e.bfm)} kg; grasa ${o(e.bfp)} %; grasa subcutánea ${e.subq?.v ?? "—"} kg (${e.subq?.pct ?? "—"} %); masa grasa visceral ${e.visMass?.v ?? "—"} kg; nivel visceral ${e.vfl?.v ?? "—"} (1-5 óptimo, 6-9 equilibrado); área visceral ${o(e.vfa)} cm²; BMR ${e.bmr ?? "—"} kcal; gasto total ${e.tee ?? "—"} kcal; edad biológica ${e.bioAge ?? "—"} (real ${e.age ?? "—"}); BWI ${e.bwi ?? "—"}/10; perímetro abdominal ${e.waist?.v ?? "—"} cm; cintura/cadera ${o(e.whr)}.
+Por zonas: ${z}.
+Recomendación nutricional de EVOLT: ${e.kcal ? e.kcal.join("-") + " kcal" : "—"}, proteína ${e.protein_g ? e.protein_g.slice(0, 2).join("-") + " g" : "—"}, hidratos ${e.carbs_g ? e.carbs_g.slice(0, 2).join("-") + " g" : "—"}, grasas ${e.fat_g ? e.fat_g.slice(0, 2).join("-") + " g" : "—"}.
+${sc.slice(1, 6).map(x => `Escaneo ${x.date}: peso ${x.weight} kg, grasa ${x.bfp?.v ?? "—"} %, músculo esquelético ${x.smm?.v ?? "—"} kg, masa grasa ${x.bfm?.v ?? "—"} kg, nivel visceral ${x.vfl?.v ?? "—"}, BWI ${x.bwi ?? "—"}`).join("\n")}`;
+}
+
 /* ---------- vista: entrenador ---------- */
 function md(src) {
   const lines = esc(src).split("\n"); let out = "", list = null;
@@ -1368,7 +1658,7 @@ function addAttach(list) {
 }
 function suggestions() {
   const p = (S.profile?.macros || []).find(m => /prote/i.test(m.name))?.target;
-  return ["¿Qué ejercicios debería subir de peso esta semana?", "Revisa mi última sesión", "¿Cómo voy de macros y pasos esta semana?", p ? `Dame un día de comidas con ${p} de proteína` : "Dame un día de comidas para mi objetivo", "Analiza mi evolución de composición corporal", "Hoy voy muy cansado, ¿qué hago?"];
+  return ["¿Qué ejercicios debería subir de peso esta semana?", "Revisa mi última sesión", "¿Cómo voy de macros y pasos esta semana?", p ? `Dame un día de comidas con ${p} de proteína` : "Dame un día de comidas para mi objetivo", "Analiza mi evolución de composición corporal", "Explícame mi último EVOLT", "Hoy voy muy cansado, ¿qué hago?"];
 }
 const coachReady = () => !!S.sample || (!HOSTED && !!S.apiKey);
 function viewCoach() {
@@ -1422,7 +1712,10 @@ HORARIO DE TRABAJO (de su Google Calendar o marcado a mano; teletrabajo = entren
 ${scheduleContext() || "Sin datos de horario."}
 
 NUTRICIÓN Y PASOS DIARIOS (Samsung Health o manual, últimos 14 días):
-${daily || "Sin datos."}`;
+${daily || "Sin datos."}
+
+ESCANEOS EVOLT 360 (báscula de bioimpedancia del gimnasio; su fuente más completa, la revisa con su entrenador; rangos "óptimo" personalizados por EVOLT):
+${evoltContext() || "Sin escaneos importados."}`;
 }
 function rules() {
   const nm = S.profile?.name || "el usuario";
@@ -1433,6 +1726,7 @@ function rules() {
 - Ten en cuenta sus notas generales (fatiga, horarios, molestias): son información que quiere que recuerdes siempre.
 - Ten en cuenta su horario de trabajo: en semanas de tarde suele entrenar por la mañana y en semanas de mañana por la tarde; los días de teletrabajo entrena en casa con la rutina de casa. Ajusta volumen, horario de comidas y descanso a su turno (tienes el horario de cada código de turno).
 - Los pesajes son revisiones con su entrenador del gimnasio en las que mide su composición corporal y reajustan ejercicios. Si se acerca uno, ayúdale a preparar qué preguntar y qué revisar; después, analiza el resultado frente a sus objetivos.
+- Si pregunta por su EVOLT, explícalo en lenguaje sencillo: qué significa cada dato, qué está en rango y qué no, cómo ha cambiado desde el escaneo anterior y qué hacer (entreno y comida). Compara la recomendación de EVOLT con sus macros objetivo.
 - En nutrición da ejemplos prácticos con comida española habitual y cantidades aproximadas.
 - Si menciona dolor, lesión, mareo u otro síntoma médico, recomienda parar y consultar con un profesional sanitario; no diagnostiques.
 - Sé breve: 4-10 líneas salvo que pida un plan detallado. Usa listas cortas con guiones y **negrita** solo para lo clave. No uses tablas.
@@ -1576,6 +1870,8 @@ function buildExport() {
     {name: "composicion_corporal.csv", mime: "text/csv", text: csv(body)},
     {name: "nutricion_y_pasos.csv", mime: "text/csv", text: csv(daily)},
     {name: "rutinas.csv", mime: "text/csv", text: csv(plans)},
+    {name: "evolt.csv", mime: "text/csv", text: csv([["fecha", "hora", "peso_kg", "masa_magra_kg", "musculo_esqueletico_kg", "proteina_kg", "minerales_kg", "agua_kg", "masa_grasa_kg", "grasa_pct", "grasa_subcutanea_kg", "grasa_visceral_kg", "nivel_visceral", "area_visceral_cm2", "bmr_kcal", "tee_kcal", "edad_biologica", "bwi", "abdomen_cm", "cintura_cadera", ...EV_ZONES.flatMap(([z]) => [z + "_musculo_kg", z + "_grasa_kg"])],
+      ...evScans().reverse().map(e => [e.date, e.time, e.weight, e.lbm?.v, e.smm?.v, e.protein?.v, e.minerals?.v, e.tbw?.v, e.bfm?.v, e.bfp?.v, e.subq?.v, e.visMass?.v, e.vfl?.v, e.vfa?.v, e.bmr, e.tee, e.bioAge, e.bwi, e.waist?.v, e.whr?.v, ...EV_ZONES.flatMap(([z]) => [e.seg?.[z]?.lean?.v, e.seg?.[z]?.fat?.v])])])},
     {name: "copia_completa.json", mime: "application/json", text: JSON.stringify(backupData(), null, 2)}
   ];
 }
@@ -1607,7 +1903,7 @@ async function exportZip() {
 }
 function exportSection() {
   const pr = S.profile || {}, dr = pr.drive, le = pr.lastExport;
-  const files = "series, cardio, composición corporal, nutrición y pasos, rutinas y una copia completa en JSON";
+  const files = "series, cardio, composición corporal, nutrición y pasos, rutinas, escaneos EVOLT y una copia completa en JSON";
   if (HOSTED) return `<section><h2>Exportar registros</h2><div class="panel stack" style="margin-top:10px">
     <p class="small">Guarda todo tu historial en tu Google Drive como archivos CSV (${files}). Cada exportación crea una carpeta con la fecha dentro de <b>Exportaciones</b>, así conservas el histórico completo para usarlo en otras apps u hojas de cálculo.</p>
     ${le ? `<p class="small muted">Última exportación: ${new Date(le.at).toLocaleString("es-ES", {day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"})}${le.url ? ` · <a href="${esc(le.url)}" target="_blank" rel="noopener">abrir ↗</a>` : ""}</p>` : ""}
@@ -1627,13 +1923,14 @@ function backupData() {
   S.body.forEach(b => docs["body/" + b.id] = strip(b));
   S.logs.forEach(l => docs["logs/" + l.id] = strip(l));
   S.daily.forEach(d => docs["daily/" + d.id] = strip(d));
+  (S.evolt || []).forEach(e => docs["evolt/" + e.id] = strip(e));
   Object.entries(S.videos).forEach(([k, v]) => docs["videos/" + k] = {...v, items: (v.items || []).filter(i => i.kind !== "asset")});
   if (S.chat.length) docs["chat/main"] = {turns: S.chat.slice(-40)};
   return {app: "registro-de-cargas", version: 1, exportedAt: new Date().toISOString(), docs};
 }
 async function restoreBackup(obj) {
   if (obj?.app !== "registro-de-cargas" || typeof obj.docs !== "object") throw new Error("formato");
-  const ok = /^(plan|profile|body|logs|daily|videos|chat)\/[A-Za-z0-9_\-.~:@+]+$/;
+  const ok = /^(plan|profile|body|logs|daily|videos|chat|evolt)\/[A-Za-z0-9_\-.~:@+]+$/;
   const entries = Object.entries(obj.docs).filter(([p, d]) => ok.test(p) && d && typeof d === "object" && !Array.isArray(d));
   for (let i = 0; i < entries.length; i += 5) await Promise.all(entries.slice(i, i + 5).map(([p, d]) => S.db.doc(p).set(d)));
   if (obj.docs["chat/main"]?.turns) S.chat = obj.docs["chat/main"].turns.slice();
@@ -1669,7 +1966,10 @@ async function saveProfile(p) { try { await S.db.doc("profile/main").set(p); } c
 document.addEventListener("click", async ev => {
   const b = ev.target.closest("button"); if (!b) return;
   const ds = b.dataset;
-  if (ds.tab) { S.tab = ds.tab; lsSet("rc.tab", S.tab); S.confirmDel = null; render(); scrollTo(0, 0); if (S.tab === "cal" && S.calLoaded && calStale(3)) syncCalendar(false); return; }
+  if (ds.tab) { S.tab = ds.tab; lsSet("rc.tab", S.tab); S.confirmDel = null; render(); scrollTo(0, 0); if (S.tab === "cal" && S.calLoaded && calStale(3)) syncCalendar(false); if (S.tab === "evolt") evAuto(); return; }
+  if (ds.evsel) { S.evSel = ds.evsel; S.confirmDel = null; render(); return; }
+  if (ds.evimp) return evImportDrive(ds.evimp);
+  if (ds.delev) { try { await S.db.doc("evolt/" + ds.delev).delete(); S.confirmDel = null; toast("Escaneo borrado (la medición de Progreso se mantiene)"); } catch { toast("No se pudo borrar."); } return; }
   if (ds.place) { S.placeTouched = true; S.place = ds.place; S.dayIdx = null; S.draft = null; render(); return; }
   if (ds.day != null) { S.dayIdx = +ds.day; S.draft = null; try { localStorage.removeItem("rc.draft"); } catch {} render(); return; }
   if (ds.step) {
@@ -1752,6 +2052,9 @@ document.addEventListener("click", async ev => {
   if (a === "stop") { S.ctl?.abort(); return; }
   if (a === "askClear") { S.confirmClear = true; render(); return; }
   if (a === "clearChat") { S.chat = []; S.confirmClear = false; render(); persistChat(); return; }
+  if (a === "evList") return evList(false);
+  if (a === "evFile") return evImportFile();
+  if (a === "evAsk") return send("Explícame mi último escaneo EVOLT en sencillo: qué está bien, qué debo mejorar y qué cambio en entreno y comida antes del próximo pesaje.");
   if (a === "addBody") {
     const w = num($("#b-w").value), f = num($("#b-f").value), m = num($("#b-m").value);
     if (w == null) { toast("Introduce al menos el peso."); return; }
@@ -1859,6 +2162,7 @@ document.addEventListener("input", ev => {
 });
 document.addEventListener("change", ev => { if (ev.target.id === "gcalWrite") { S.gcalWrite = ev.target.checked; lsSet("rc.gcalWrite", S.gcalWrite); render(); return; } if (ev.target.dataset?.shpick) { S.shPick = S.shPick || new Set(); ev.target.checked ? S.shPick.add(ev.target.dataset.shpick) : S.shPick.delete(ev.target.dataset.shpick); return; } if (ev.target.id === "coachImg") { addAttach([...ev.target.files]); ev.target.value = ""; return; } if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
 document.addEventListener("paste", ev => { if (ev.target.id !== "ask" || !imagesOk()) return; const imgs = [...(ev.clipboardData?.files || [])].filter(f => f.type.startsWith("image/")); if (imgs.length) { ev.preventDefault(); addAttach(imgs); } });
+document.addEventListener("toggle", ev => { if (ev.target.id === "evImp") S.evOpen = ev.target.open; }, true);
 document.addEventListener("toggle", ev => { if (ev.target.id === "rangeBox") S.rangeOpen = ev.target.open; }, true);
 document.addEventListener("toggle", ev => { if (ev.target.id === "prevDetails") lsSet("rc.prevOpen", ev.target.open); }, true);
 document.addEventListener("keydown", ev => { if (ev.target.id === "ask" && ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); send(ev.target.value); } });
@@ -1882,7 +2186,8 @@ if (!HOSTED && "serviceWorker" in navigator && location.protocol === "https:") a
   db.doc("calendar/overrides").onSnapshot(s => { S.calOv = s.exists ? (s.data().days || {}) : {}; autoPlace(); soon(); }, err);
   db.collection("daily").orderBy("date", "desc").limit(400).onSnapshot(s => { S.daily = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); }, err);
   db.collection("plan").onSnapshot(s => { S.plans = {}; s.docs.forEach(d => S.plans[d.id] = d.data()); soon(); }, err);
-  db.doc("profile/main").onSnapshot(s => { S.profile = s.exists ? s.data() : null; S.profileLoaded = true; soon(); }, err);
+  db.doc("profile/main").onSnapshot(s => { S.profile = s.exists ? s.data() : null; S.profileLoaded = true; soon(); if (S.tab === "evolt") evAuto(); }, err);
+  db.collection("evolt").onSnapshot(s => { S.evolt = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); }, err);
   db.collection("body").onSnapshot(s => { S.body = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); }, err);
   db.collection("logs").orderBy("createdAt", "desc").limit(400).onSnapshot(s => { S.logs = s.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt); soon(); }, err);
   db.doc("chat/main").get().then(s => { if (s.exists && !S.chat.length) { S.chat = (s.data().turns || []).slice(); soon(); } }).catch(() => {});
