@@ -445,6 +445,14 @@ nav.tabs button[aria-current="page"] svg{stroke:var(--accent);stroke-width:2.2}
 .evmac b{font-family:var(--f-display);font-size:17px}.evmac small{color:var(--muted);font-size:12px}
 nav.tabs{padding-left:4px;padding-right:4px}
 nav.tabs button{font-size:10px;letter-spacing:-.02em}
+
+/* comida de hoy en el entrenador */
+.foodcard{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+.fms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
+.fm .fl{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:13px;font-weight:600;color:var(--muted)}
+.fm .fl b{font-family:var(--f-display);font-size:17px;color:var(--ink)}.fm .fl small{font-size:11px;color:var(--muted);font-weight:600}
+.fm .fb{height:8px;border-radius:99px;background:var(--sunk);margin-top:5px;overflow:hidden}.fm .fb i{display:block;height:100%;border-radius:99px;background:var(--kc)}
+.fm .fr{margin-top:3px;color:var(--muted)}.fm .fr.bad{color:var(--plate-red)}
 </style>
 
 </head>
@@ -1648,6 +1656,54 @@ function md(src) {
   }
   close(); return out;
 }
+/* ---------- objetivo diario y lo que llevas hoy ---------- */
+const MAC_KEYS = [["kcal", "Calorías", "kcal", /calor|kcal|energ/i, "var(--plate-green)"], ["protein", "Proteína", "g", /prote/i, "var(--plate-blue)"], ["carbs", "Hidratos", "g", /hidrat|carbo/i, "var(--plate-yellow)"], ["fat", "Grasas", "g", /gras/i, "var(--plate-red)"]];
+/* Lee los objetivos del Perfil («1.700 - 1.800 kcal», «140 g», «60-70 g»…) como números [mín, máx]. */
+function macroTargets() {
+  const out = {};
+  for (const [k, , , re] of MAC_KEYS) {
+    const m = (S.profile?.macros || []).find(x => re.test(x.name || "")); if (!m) continue;
+    const nums = String(m.target || "").replace(/(\d)\.(\d{3})(?!\d)/g, "$1$2").replace(/,/g, ".").match(/\d+(?:\.\d+)?/g);
+    if (nums?.length) { const a = +nums[0], b = +(nums[1] ?? nums[0]); out[k] = [Math.min(a, b), Math.max(a, b)]; }
+  }
+  return out;
+}
+const todayFood = () => S.daily.find(d => d.date === todayISO()) || null;
+function foodDayText() {
+  const t = macroTargets(), d = todayFood(), now = new Date(), hh = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+  const w = typeof workDay === "function" ? workDay(todayISO()) : null;
+  const tg = MAC_KEYS.filter(([k]) => t[k]).map(([k, l, u]) => `${l} ${t[k][0] === t[k][1] ? t[k][0] : t[k].join("-")} ${u}`).join(", ");
+  const eaten = d && MAC_KEYS.some(([k]) => d[k] != null) ? MAC_KEYS.map(([k, l, u]) => `${l} ${d[k] ?? "?"} ${u}`).join(", ") : null;
+  const left = eaten ? MAC_KEYS.filter(([k]) => t[k] && d[k] != null).map(([k, l, u]) => `${l} ${Math.round(t[k][0] - d[k])}${t[k][0] !== t[k][1] ? " a " + Math.round(t[k][1] - d[k]) : ""} ${u}`).join(", ") : null;
+  return `OBJETIVO DIARIO (de su Perfil, en números): ${tg || "sin definir"}.
+HOY ${todayISO()} a las ${hh}${w ? " · trabajo: " + workLabel(w) : ""}:
+- Lleva comido: ${eaten ? eaten + ` (apuntado: ${d.source || "a mano"})` : "aún no ha apuntado nada hoy"}.
+- Le queda: ${left || "—"}.`;
+}
+function foodCard() {
+  const t = macroTargets(), d = todayFood() || {};
+  if (!Object.keys(t).length) return `<div class="foodcard"><div class="small">Para que el entrenador sepa cuánto te queda por comer, pon tus objetivos de calorías y macros en <b>Perfil → Objetivos de nutrición</b>.</div></div>`;
+  const bars = MAC_KEYS.filter(([k]) => t[k]).map(([k, l, u, , c]) => {
+    const v = d[k], hi = t[k][1], pct = v != null ? Math.min(100, v / hi * 100) : 0, over = v != null && v > hi;
+    const left = v != null ? Math.round(t[k][0] - v) : null;
+    return `<div class="fm" style="--kc:${c}"><div class="fl"><span>${l}</span><b class="num">${v != null ? fmtN(v, 0) : "–"}<small> ${u}</small></b></div>
+      <div class="fb"><i style="width:${pct}%;${over ? "background:var(--plate-red)" : ""}"></i></div><div class="fr small ${over ? "bad" : ""}">Objetivo ${t[k][0] === t[k][1] ? fmtN(hi, 0) : fmtN(t[k][0], 0) + "–" + fmtN(hi, 0)}${v == null ? "" : " · "}${v == null ? "" : over ? `+${fmtN(v - hi, 0)} ${u} de más` : left > 0 ? `faltan ${fmtN(left, 0)} ${u}` : "objetivo cumplido"}</div></div>`;
+  }).join("");
+  const edit = S.foodEdit ? `<div class="grid2" style="margin-top:10px">${MAC_KEYS.map(([k, l, u]) => `<div class="field"><label for="fd-${k}">${l} (${u})</label><input class="input" id="fd-${k}" inputmode="decimal" value="${d[k] ?? ""}" placeholder="0"></div>`).join("")}</div>
+    <div class="row" style="margin-top:8px"><button class="btn primary" data-act="foodSave">Guardar</button><button class="btn ghost" data-act="foodEdit">Cancelar</button></div>` : "";
+  return `<div class="foodcard"><div class="row between" style="margin-bottom:8px"><div class="eyebrow">Tu comida de hoy</div><div class="row" style="gap:6px">
+      <button class="chip" data-act="foodEdit">${S.foodEdit ? "Cerrar" : d.kcal != null ? "Actualizar" : "Apuntar lo que llevo"}</button>
+      ${!S.busy && coachReady() ? `<button class="chip" data-act="foodNext">¿Qué como ahora?</button>` : ""}</div></div>
+    <div class="fms">${bars}</div>${edit}
+    ${d.source ? `<div class="small muted" style="margin-top:6px">Datos de hoy: ${esc(d.source)}. ${imagesOk() ? "Envía una captura de Samsung Health y se actualizan solos." : ""}</div>` : ""}</div>`;
+}
+/* El entrenador devuelve al final una línea DATOS_HOY {...} cuando lee totales en una captura: se guarda y no se muestra. */
+function takeFoodData(text) {
+  const m = String(text || "").match(/\n?\s*DATOS_HOY:\s*(\{[^\n]*\})\s*$/);
+  if (!m) return {text, data: null};
+  let data = null; try { const o = JSON.parse(m[1]); data = {}; for (const [k] of MAC_KEYS) if (o[k] != null && isFinite(+o[k])) data[k] = +o[k]; if (!Object.keys(data).length) data = null; } catch {}
+  return {text: text.slice(0, m.index).trimEnd(), data};
+}
 function imagesOk() { return HOSTED ? !!S.imgCaps : !!S.apiKey; }
 function maxImages() { return HOSTED ? (S.imgCaps?.maxCount || 1) : 5; }
 function clearAttach() { (S.attachUrls || []).forEach(u => URL.revokeObjectURL(u)); S.attach = []; S.attachUrls = []; }
@@ -1658,7 +1714,7 @@ function addAttach(list) {
 }
 function suggestions() {
   const p = (S.profile?.macros || []).find(m => /prote/i.test(m.name))?.target;
-  return ["¿Qué ejercicios debería subir de peso esta semana?", "Revisa mi última sesión", "¿Cómo voy de macros y pasos esta semana?", p ? `Dame un día de comidas con ${p} de proteína` : "Dame un día de comidas para mi objetivo", "Analiza mi evolución de composición corporal", "Explícame mi último EVOLT", "Hoy voy muy cansado, ¿qué hago?"];
+  return ["¿Qué ejercicios debería subir de peso esta semana?", "Revisa mi última sesión", "¿Cómo voy de macros y pasos esta semana?", p ? `Dame un día de comidas con ${p} de proteína` : "Dame un día de comidas para mi objetivo", "Analiza mi evolución de composición corporal", "Explícame mi último EVOLT", "¿Qué me queda por comer hoy?", "Hoy voy muy cansado, ¿qué hago?"];
 }
 const coachReady = () => !!S.sample || (!HOSTED && !!S.apiKey);
 function viewCoach() {
@@ -1669,13 +1725,14 @@ function viewCoach() {
   const off = !coachReady() && S.dbState !== "loading" ? `<div class="banner">${HOSTED ? "El entrenador solo funciona al abrir esta app dentro de Claude." : "Para usar el entrenador, añade tu clave de la API de Anthropic en <b>Perfil → Entrenador IA</b>."}</div>` : "";
   return `<div class="top"><div><div class="eyebrow">Fuerza · ${esc((S.profile?.goal || "entrenamiento").toLowerCase())} · nutrición</div><h1>Entrenador</h1></div>
     ${S.chat.length ? (S.confirmClear ? `<button class="btn danger" data-act="clearChat">Borrar conversación</button>` : `<button class="btn ghost" data-act="askClear">Nueva conversación</button>`) : ""}</div>
-    ${off}<div class="chat">${intro}${msgs}${live}<div id="chatEnd"></div></div>
+    ${off}${foodCard()}<div class="chat">${intro}${msgs}${live}<div id="chatEnd"></div></div>
     <div class="composer">
       ${S.showIdeas && !S.busy ? `<div class="ideas" role="menu">${suggestions().map(s => `<button role="menuitem" data-suggest="${esc(s)}">${esc(s)}</button>`).join("")}</div>` : ""}
       ${S.attach.length ? `<div class="thumbs">${S.attach.map((f, i) => `<span class="thumb"><img src="${S.attachUrls[i]}" alt="Imagen adjunta ${i + 1}"><button data-unattach="${i}" aria-label="Quitar imagen">✕</button></span>`).join("")}</div>` : ""}
       <div class="box">
         <button class="iconbtn" data-act="ideas" aria-expanded="${!!S.showIdeas}" aria-label="Ideas para preguntar" title="Ideas para preguntar" ${S.busy ? "disabled" : ""}><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
-        ${imagesOk() ? `<label class="iconbtn" for="coachImg" title="Adjuntar capturas o fotos" aria-label="Adjuntar imágenes"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg></label><input type="file" id="coachImg" accept="image/*" multiple hidden ${S.busy ? "disabled" : ""}>` : ""}
+        ${imagesOk() ? `<label class="iconbtn" for="coachImg" title="Adjuntar capturas o fotos" aria-label="Adjuntar capturas"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg></label><input type="file" id="coachImg" accept="image/*" multiple hidden ${S.busy ? "disabled" : ""}>`
+          : `<button class="iconbtn" data-act="noImages" title="Adjuntar capturas" aria-label="Adjuntar capturas"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg></button>`}
         <textarea class="input" id="ask" placeholder="${S.attach.length ? "¿Qué quieres que mire en las imágenes?" : "Escribe tu pregunta…"}" ${S.busy ? "disabled" : ""}>${esc(S.askDraft || "")}</textarea>
         ${S.busy ? `<button class="btn" data-act="stop">Parar</button>` : `<button class="btn primary" data-act="send">Enviar</button>`}</div></div>`;
 }
@@ -1690,6 +1747,7 @@ function context() {
   return `Hoy es ${fmtDate(todayISO(), {weekday: "long", day: "numeric", month: "long", year: "numeric"})} (${todayISO()}). Según su calendario (lunes Día 1 … viernes Día 5, fin de semana descanso), hoy toca: ${wi == null ? "descanso" : (S.plans.gym?.days?.[wi]?.name || "—")}.
 PERFIL: ${pr.name || "Usuario"}, altura ${pr.height || "—"} cm. Fase actual: ${pr.goal || "no indicada"}.${pr.gym ? " Gimnasio: " + pr.gym + "." : ""}${pr.equipment ? " Material en casa: " + pr.equipment + "." : ""}${pr.trainer ? " Su entrenador en el gimnasio: " + pr.trainer + "." : ""}
 MACROS OBJETIVO: ${(pr.macros || []).map(m => `${m.name} ${m.target}${m.why ? " (" + m.why + ")" : ""}`).join("; ") || "sin definir"}
+${foodDayText()}
 DESCANSOS: ${(pr.rest || []).map(r => `${r.type} ${r.time} (${r.ex})`).join("; ") || "—"}
 NOTAS GENERALES: ${(pr.notes || []).map(n => `[${n.status}] ${n.text}`).join(" | ") || "—"}
 RECORDATORIOS: ${(pr.reminders || []).join("; ") || "—"}
@@ -1727,6 +1785,7 @@ function rules() {
 - Ten en cuenta su horario de trabajo: en semanas de tarde suele entrenar por la mañana y en semanas de mañana por la tarde; los días de teletrabajo entrena en casa con la rutina de casa. Ajusta volumen, horario de comidas y descanso a su turno (tienes el horario de cada código de turno).
 - Los pesajes son revisiones con su entrenador del gimnasio en las que mide su composición corporal y reajustan ejercicios. Si se acerca uno, ayúdale a preparar qué preguntar y qué revisar; después, analiza el resultado frente a sus objetivos.
 - Si pregunta por su EVOLT, explícalo en lenguaje sencillo: qué significa cada dato, qué está en rango y qué no, cómo ha cambiado desde el escaneo anterior y qué hacer (entreno y comida). Compara la recomendación de EVOLT con sus macros objetivo.
+- Comidas del día: usa su OBJETIVO DIARIO y lo que lleva HOY para calcular lo que le queda (kcal y gramos de proteína, hidratos y grasas). Cuando pregunte qué comer, propone las siguientes comidas que encajen en lo que le queda, según la hora y su turno de trabajo (cuántas comidas le quedan, cena ligera si es tarde, comida transportable si trabaja presencial), con cantidades en gramos y macros aproximados de cada plato. Prioriza llegar a la proteína.
 - En nutrición da ejemplos prácticos con comida española habitual y cantidades aproximadas.
 - Si menciona dolor, lesión, mareo u otro síntoma médico, recomienda parar y consultar con un profesional sanitario; no diagnostiques.
 - Sé breve: 4-10 líneas salvo que pida un plan detallado. Usa listas cortas con guiones y **negrita** solo para lo clave. No uses tablas.
@@ -1758,12 +1817,14 @@ async function send(text) {
   S.askDraft = ""; S.showIdeas = false; clearAttach(); S.busy = true; S.liveText = ""; S.confirmClear = false; S.tab = "coach"; render();
   S.ctl = new AbortController();
   const turns = [{role: "user", content: rules() + context()}, {role: "assistant", content: "Entendido. Tengo todos tus datos delante. ¿En qué te ayudo?"}, ...S.chat.slice(-20).map(t => ({role: t.role, content: t.content}))];
-  if (files.length) turns[turns.length - 1] = {role: "user", content: text + `\n\n(Adjunto ${files.length} imagen${files.length > 1 ? "es" : ""}: capturas de mi móvil, por ejemplo de Samsung Health con el agua, las comidas, los pasos o los macros, o fotos de comida. Lee los datos que aparezcan (cantidades, kcal, proteína, grasas, hidratos, agua), resúmelos y valóralos frente a mis objetivos de nutrición. Si es una foto de comida, estima raciones y macros y di que es una estimación.)`};
+  if (files.length) turns[turns.length - 1] = {role: "user", content: text + `\n\n(Adjunto ${files.length} imagen${files.length > 1 ? "es" : ""}: capturas de mi móvil, por ejemplo de Samsung Health con el agua, las comidas, los pasos o los macros, o fotos de comida. Lee los datos que aparezcan (cantidades, kcal, proteína, grasas, hidratos, agua), resúmelos y valóralos frente a mis objetivos de nutrición: dime cuánto me queda de cada cosa y qué puedo comer en las siguientes comidas. Si es una foto de comida, estima raciones y macros y di que es una estimación. Si las capturas muestran los TOTALES de lo que llevo comido hoy, termina tu respuesta con una última línea exacta, sin nada después: DATOS_HOY: {"kcal": número, "protein": gramos, "carbs": gramos, "fat": gramos} (pon null en lo que no aparezca). Si no son totales del día de hoy, no añadas esa línea.)`};
   try {
     let out;
-    if (S.sample) ({text: out} = await S.sample(turns, {cache: false, signal: S.ctl.signal, ...(files.length ? {images: files} : {}), onText: ({text}) => { S.liveText = text; const el = $("#live"); if (el) { el.classList.remove("think"); el.innerHTML = md(text); el.scrollIntoView({block: "end"}); } }}));
+    if (S.sample) ({text: out} = await S.sample(turns, {cache: false, signal: S.ctl.signal, ...(files.length ? {images: files} : {}), onText: ({text}) => { text = text.replace(/\n?\s*DATOS_HOY:[^\n]*$/, ""); S.liveText = text; const el = $("#live"); if (el) { el.classList.remove("think"); el.innerHTML = md(text); el.scrollIntoView({block: "end"}); } }}));
     else out = await askAnthropic(turns, S.ctl.signal, files);
+    const fd = takeFoodData(out); out = fd.text;
     S.chat.push({role: "assistant", content: out});
+    if (fd.data && S.db) { try { await writeDaily([{date: todayISO(), ...fd.data}], "Captura de Samsung Health"); toast("He apuntado lo que llevas hoy"); } catch {} }
   } catch (e) {
     if (e?.name === "AbortError") e = {code: "cancelled"};
     if (e?.text) S.chat.push({role: "assistant", content: e.text + (e.code === "cancelled" ? "\n\n*(respuesta detenida)*" : "\n\n*(respuesta interrumpida)*")});
@@ -2052,6 +2113,13 @@ document.addEventListener("click", async ev => {
   if (a === "stop") { S.ctl?.abort(); return; }
   if (a === "askClear") { S.confirmClear = true; render(); return; }
   if (a === "clearChat") { S.chat = []; S.confirmClear = false; render(); persistChat(); return; }
+  if (a === "foodEdit") { S.foodEdit = !S.foodEdit; render(); return; }
+  if (a === "foodSave") {
+    const d = {date: todayISO()}; for (const [k] of MAC_KEYS) { const v = num($("#fd-" + k)?.value); if (v != null) d[k] = v; }
+    try { await writeDaily([d], "Manual"); S.foodEdit = false; toast("Comida de hoy actualizada"); } catch { toast("No se pudo guardar."); } render(); return;
+  }
+  if (a === "foodNext") return send("Según lo que llevo comido hoy y lo que me queda, ¿qué como en las siguientes comidas? Dame opciones concretas con cantidades.");
+  if (a === "noImages") { toast(HOSTED ? "En esta vista de Claude no se pueden enviar imágenes. Pulsa «Apuntar lo que llevo» y escribe los totales de Samsung Health." : "Para enviar capturas añade tu clave de la API en Perfil → Entrenador IA."); return; }
   if (a === "evList") return evList(false);
   if (a === "evFile") return evImportFile();
   if (a === "evAsk") return send("Explícame mi último escaneo EVOLT en sencillo: qué está bien, qué debo mejorar y qué cambio en entreno y comida antes del próximo pesaje.");
