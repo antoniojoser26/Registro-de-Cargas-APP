@@ -453,6 +453,18 @@ nav.tabs button{font-size:10px;letter-spacing:-.02em}
 .fm .fl b{font-family:var(--f-display);font-size:17px;color:var(--ink)}.fm .fl small{font-size:11px;color:var(--muted);font-weight:600}
 .fm .fb{height:8px;border-radius:99px;background:var(--sunk);margin-top:5px;overflow:hidden}.fm .fb i{display:block;height:100%;border-radius:99px;background:var(--kc)}
 .fm .fr{margin-top:3px;color:var(--muted)}.fm .fr.bad{color:var(--plate-red)}
+
+.foodcard.sticky{position:sticky;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:4;padding:8px 10px}
+.foodcard.sticky.open{padding:14px;max-height:70vh;overflow:auto}
+.foodbar{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) 16px;gap:8px;align-items:end;width:100%}
+.foodbar:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:12px}
+.fmini{display:grid;gap:2px;min-width:0}.fmini b{font-family:var(--f-display);font-size:15px}.fmini small{font-size:10.5px;color:var(--muted);font-weight:600}
+.fmini>i{display:block;height:5px;border-radius:99px;background:var(--sunk);overflow:hidden}.fmini>i>i{display:block;height:100%;background:var(--kc);border-radius:99px}
+.fmini em{font-style:normal;font-size:10.5px;color:var(--muted)}
+.foodbar .chev{color:var(--muted);font-size:13px;align-self:center}
+.foodttl{all:unset;cursor:pointer}
+.thumb{position:relative}.ocrst{position:absolute;left:4px;bottom:4px;font-style:normal;font-size:10.5px;font-weight:700;background:rgba(255,255,255,.92);color:var(--ink);border-radius:6px;padding:1px 5px}
+.ocrst.done{color:var(--good)}.ocrst.error,.ocrst.empty{color:var(--plate-red)}
 </style>
 
 </head>
@@ -511,7 +523,7 @@ const S = {
   busy: false, ctl: null, confirmClear: false, confirmDel: null,
   mcp: null, assets: null, videos: {}, vPlace: "gym", vAdd: null, vMode: "drive", driveFiles: null, driveState: "idle", driveErr: "", uploading: false,
   daily: [], nutMetric: "kcal", importing: "",
-  editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, gcalWrite: lsGet("rc.gcalWrite") !== false, gcalMap: {}, showIdeas: false, attach: [], attachUrls: [], imgCaps: null, exporting: "", exportBusy: false,
+  editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, gcalWrite: lsGet("rc.gcalWrite") !== false, gcalMap: {}, showIdeas: false, attach: [], attachUrls: [], attachOcr: [], imgCaps: null, exporting: "", exportBusy: false,
   evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
   apiKey: lsGet("rc.apikey") || "", apiModel: lsGet("rc.model") || ""
 };
@@ -1691,7 +1703,9 @@ function foodCard() {
   }).join("");
   const edit = S.foodEdit ? `<div class="grid2" style="margin-top:10px">${MAC_KEYS.map(([k, l, u]) => `<div class="field"><label for="fd-${k}">${l} (${u})</label><input class="input" id="fd-${k}" inputmode="decimal" value="${d[k] ?? ""}" placeholder="0"></div>`).join("")}</div>
     <div class="row" style="margin-top:8px"><button class="btn primary" data-act="foodSave">Guardar</button><button class="btn ghost" data-act="foodEdit">Cancelar</button></div>` : "";
-  return `<div class="foodcard"><div class="row between" style="margin-bottom:8px"><div class="eyebrow">Tu comida de hoy</div><div class="row" style="gap:6px">
+  const mini = MAC_KEYS.filter(([k]) => t[k]).map(([k, l, u, , c]) => { const v = d[k], hi = t[k][1]; return `<span class="fmini" style="--kc:${c}"><b class="num">${v != null ? fmtN(v, 0) : "–"}</b><small>/${fmtN(hi, 0)}${k === "kcal" ? "" : "g"}</small><i><i style="width:${v != null ? Math.min(100, v / hi * 100) : 0}%"></i></i><em>${k === "kcal" ? "kcal" : l.slice(0, 4).toLowerCase() + "."}</em></span>`; }).join("");
+  if (!S.foodOpen) return `<div class="foodcard sticky"><button class="foodbar" data-act="foodToggle" aria-expanded="false" aria-label="Tu comida de hoy: ver detalle">${mini}<span class="chev" aria-hidden="true">▾</span></button></div>`;
+  return `<div class="foodcard sticky open"><div class="row between" style="margin-bottom:8px"><button class="eyebrow foodttl" data-act="foodToggle" aria-expanded="true">Tu comida de hoy ▴</button><div class="row" style="gap:6px">
       <button class="chip" data-act="foodEdit">${S.foodEdit ? "Cerrar" : d.kcal != null ? "Actualizar" : "Apuntar lo que llevo"}</button>
       ${!S.busy && coachReady() ? `<button class="chip" data-act="foodNext">¿Qué como ahora?</button>` : ""}</div></div>
     <div class="fms">${bars}</div>${edit}
@@ -1705,11 +1719,40 @@ function takeFoodData(text) {
   return {text: text.slice(0, m.index).trimEnd(), data};
 }
 function imagesOk() { return HOSTED ? !!S.imgCaps : !!S.apiKey; }
-function maxImages() { return HOSTED ? (S.imgCaps?.maxCount || 1) : 5; }
-function clearAttach() { (S.attachUrls || []).forEach(u => URL.revokeObjectURL(u)); S.attach = []; S.attachUrls = []; }
+function maxImages() { return ocrMode() ? 3 : HOSTED ? (S.imgCaps?.maxCount || 1) : 5; }
+/* Si esta vista de Claude no admite imágenes (p. ej. la app del móvil), la captura se lee aquí mismo con
+   Tesseract (reconocimiento de texto, ficheros publicados junto a la app) y al entrenador le llega el texto. */
+const ocrMode = () => HOSTED && !S.imgCaps;
+let tessP = null;
+function ocrWorker() {
+  if (tessP) return tessP;
+  tessP = (async () => {
+    if (!window.Tesseract) await new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "tess/tesseract.min.js"; sc.onload = ok; sc.onerror = () => ko(new Error("ocr_load")); document.head.append(sc); });
+    const base = new URL("tess/", location.href).href;
+    return Tesseract.createWorker("spa", 1, {workerPath: base + "ocr-worker.js", corePath: base, langPath: base, workerBlobURL: false, gzip: true, cacheMethod: "none"});
+  })();
+  tessP.catch(() => { tessP = null; });
+  return tessP;
+}
+/* Prepara la captura: escala de grises y tamaño razonable, mejora la lectura de números. */
+async function ocrImage(file) {
+  const img = await createImageBitmap(file), k = Math.min(1, 2000 / Math.max(img.width, img.height));
+  const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  const g = c.getContext("2d"); g.filter = "grayscale(1) contrast(1.2)"; g.drawImage(img, 0, 0, c.width, c.height); return c;
+}
+function startOcr(i) {
+  const f = S.attach[i]; S.attachOcr[i] = {state: "reading", text: ""};
+  const job = S.attachOcr[i];
+  job.p = (async () => {
+    try { const w = await ocrWorker(); const {data} = await w.recognize(await ocrImage(f)); job.text = (data.text || "").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim(); job.state = job.text ? "done" : "empty"; }
+    catch (e) { job.state = "error"; }
+    if (S.tab === "coach" && !S.busy) render();
+  })();
+}
+function clearAttach() { (S.attachUrls || []).forEach(u => URL.revokeObjectURL(u)); S.attach = []; S.attachUrls = []; S.attachOcr = []; }
 function addAttach(list) {
   const ok = /^image\/(jpeg|png|webp|gif)$/;
-  for (const f of list) { if (!ok.test(f.type)) { toast("Solo se admiten imágenes JPG, PNG, WebP o GIF."); continue; } if (S.attach.length >= maxImages()) { toast(`Puedes adjuntar como máximo ${maxImages()} imagen${maxImages() > 1 ? "es" : ""} por mensaje.`); break; } S.attach.push(f); S.attachUrls.push(URL.createObjectURL(f)); }
+  for (const f of list) { if (!ok.test(f.type)) { toast("Solo se admiten imágenes JPG, PNG, WebP o GIF."); continue; } if (S.attach.length >= maxImages()) { toast(`Puedes adjuntar como máximo ${maxImages()} imagen${maxImages() > 1 ? "es" : ""} por mensaje.`); break; } S.attach.push(f); S.attachUrls.push(URL.createObjectURL(f)); if (ocrMode()) startOcr(S.attach.length - 1); }
   render();
 }
 function suggestions() {
@@ -1728,10 +1771,10 @@ function viewCoach() {
     ${off}${foodCard()}<div class="chat">${intro}${msgs}${live}<div id="chatEnd"></div></div>
     <div class="composer">
       ${S.showIdeas && !S.busy ? `<div class="ideas" role="menu">${suggestions().map(s => `<button role="menuitem" data-suggest="${esc(s)}">${esc(s)}</button>`).join("")}</div>` : ""}
-      ${S.attach.length ? `<div class="thumbs">${S.attach.map((f, i) => `<span class="thumb"><img src="${S.attachUrls[i]}" alt="Imagen adjunta ${i + 1}"><button data-unattach="${i}" aria-label="Quitar imagen">✕</button></span>`).join("")}</div>` : ""}
+      ${S.attach.length ? `<div class="thumbs">${S.attach.map((f, i) => `<span class="thumb"><img src="${S.attachUrls[i]}" alt="Imagen adjunta ${i + 1}"><button data-unattach="${i}" aria-label="Quitar imagen">✕</button>${S.attachOcr?.[i] ? `<em class="ocrst ${S.attachOcr[i].state}">${{reading: "Leyendo…", done: "Leída", empty: "Sin texto", error: "Error"}[S.attachOcr[i].state]}</em>` : ""}</span>`).join("")}${ocrMode() ? `<span class="small muted" style="align-self:center;max-width:220px">La captura se lee aquí y al entrenador le llega el texto.</span>` : ""}</div>` : ""}
       <div class="box">
         <button class="iconbtn" data-act="ideas" aria-expanded="${!!S.showIdeas}" aria-label="Ideas para preguntar" title="Ideas para preguntar" ${S.busy ? "disabled" : ""}><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
-        ${imagesOk() ? `<label class="iconbtn" for="coachImg" title="Adjuntar capturas o fotos" aria-label="Adjuntar capturas"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg></label><input type="file" id="coachImg" accept="image/*" multiple hidden ${S.busy ? "disabled" : ""}>`
+        ${imagesOk() || ocrMode() ? `<label class="iconbtn" for="coachImg" title="Adjuntar capturas o fotos" aria-label="Adjuntar capturas"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg></label><input type="file" id="coachImg" accept="image/*" multiple hidden ${S.busy ? "disabled" : ""}>`
           : `<button class="iconbtn" data-act="noImages" title="Adjuntar capturas" aria-label="Adjuntar capturas"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-8 7"/></svg></button>`}
         <textarea class="input" id="ask" placeholder="${S.attach.length ? "¿Qué quieres que mire en las imágenes?" : "Escribe tu pregunta…"}" ${S.busy ? "disabled" : ""}>${esc(S.askDraft || "")}</textarea>
         ${S.busy ? `<button class="btn" data-act="stop">Parar</button>` : `<button class="btn primary" data-act="send">Enviar</button>`}</div></div>`;
@@ -1813,15 +1856,22 @@ async function send(text) {
   if ((!text && !files.length) || S.busy) return;
   if (!coachReady()) { toast(HOSTED ? "Abre la app dentro de Claude para usar el entrenador." : "Añade tu clave de la API en Perfil → Entrenador IA."); return; }
   if (!text) text = "Mira estas imágenes y dime qué ves y cómo encaja con mis objetivos.";
+  const ocr = files.length && ocrMode() ? (S.attachOcr || []).slice() : null;
   S.chat.push(files.length ? {role: "user", content: text, images: files.length} : {role: "user", content: text});
   S.askDraft = ""; S.showIdeas = false; clearAttach(); S.busy = true; S.liveText = ""; S.confirmClear = false; S.tab = "coach"; render();
   S.ctl = new AbortController();
   const turns = [{role: "user", content: rules() + context()}, {role: "assistant", content: "Entendido. Tengo todos tus datos delante. ¿En qué te ayudo?"}, ...S.chat.slice(-20).map(t => ({role: t.role, content: t.content}))];
-  if (files.length) turns[turns.length - 1] = {role: "user", content: text + `\n\n(Adjunto ${files.length} imagen${files.length > 1 ? "es" : ""}: capturas de mi móvil, por ejemplo de Samsung Health con el agua, las comidas, los pasos o los macros, o fotos de comida. Lee los datos que aparezcan (cantidades, kcal, proteína, grasas, hidratos, agua), resúmelos y valóralos frente a mis objetivos de nutrición: dime cuánto me queda de cada cosa y qué puedo comer en las siguientes comidas. Si es una foto de comida, estima raciones y macros y di que es una estimación. Si las capturas muestran los TOTALES de lo que llevo comido hoy, termina tu respuesta con una última línea exacta, sin nada después: DATOS_HOY: {"kcal": número, "protein": gramos, "carbs": gramos, "fat": gramos} (pon null en lo que no aparezca). Si no son totales del día de hoy, no añadas esa línea.)`};
+  if (ocr) {
+    S.liveText = ""; render(); const el = $("#live"); if (el) el.textContent = "Leyendo las capturas…";
+    await Promise.all(ocr.map(j => j?.p));
+    const txt = ocr.map((j, i) => `--- Captura ${i + 1} ---\n${j?.state === "done" ? j.text : "(no se pudo leer texto)"}`).join("\n\n");
+    if (!ocr.some(j => j?.state === "done")) { S.busy = false; S.chat.pop(); S.askDraft = text; toast("No pude leer texto en la captura. Prueba con otra o pulsa «Apuntar lo que llevo»."); render(); return; }
+    turns[turns.length - 1] = {role: "user", content: text + `\n\n(Adjunto ${files.length} captura${files.length > 1 ? "s" : ""} de mi móvil, normalmente de Samsung Health. No puedes ver las imágenes: abajo tienes su texto leído automáticamente con reconocimiento de texto, así que puede haber errores, números pegados o el orden cambiado; interprétalo con sentido común y, si algo es dudoso, dilo. Saca los datos (kcal, proteína, grasas, hidratos, agua, pasos, comidas), resúmelos y valóralos frente a mis objetivos: dime cuánto me queda de cada cosa y qué puedo comer en las siguientes comidas. Si el texto muestra los TOTALES de lo que llevo comido hoy, termina tu respuesta con una última línea exacta, sin nada después: DATOS_HOY: {"kcal": número, "protein": gramos, "carbs": gramos, "fat": gramos} (pon null en lo que no aparezca). Si no son totales del día de hoy, no añadas esa línea.)\n\n${txt}`};
+  } else if (files.length) turns[turns.length - 1] = {role: "user", content: text + `\n\n(Adjunto ${files.length} imagen${files.length > 1 ? "es" : ""}: capturas de mi móvil, por ejemplo de Samsung Health con el agua, las comidas, los pasos o los macros, o fotos de comida. Lee los datos que aparezcan (cantidades, kcal, proteína, grasas, hidratos, agua), resúmelos y valóralos frente a mis objetivos de nutrición: dime cuánto me queda de cada cosa y qué puedo comer en las siguientes comidas. Si es una foto de comida, estima raciones y macros y di que es una estimación. Si las capturas muestran los TOTALES de lo que llevo comido hoy, termina tu respuesta con una última línea exacta, sin nada después: DATOS_HOY: {"kcal": número, "protein": gramos, "carbs": gramos, "fat": gramos} (pon null en lo que no aparezca). Si no son totales del día de hoy, no añadas esa línea.)`};
   try {
     let out;
-    if (S.sample) ({text: out} = await S.sample(turns, {cache: false, signal: S.ctl.signal, ...(files.length ? {images: files} : {}), onText: ({text}) => { text = text.replace(/\n?\s*DATOS_HOY:[^\n]*$/, ""); S.liveText = text; const el = $("#live"); if (el) { el.classList.remove("think"); el.innerHTML = md(text); el.scrollIntoView({block: "end"}); } }}));
-    else out = await askAnthropic(turns, S.ctl.signal, files);
+    if (S.sample) ({text: out} = await S.sample(turns, {cache: false, signal: S.ctl.signal, ...(files.length && !ocr ? {images: files} : {}), onText: ({text}) => { text = text.replace(/\n?\s*DATOS_HOY:[^\n]*$/, ""); S.liveText = text; const el = $("#live"); if (el) { el.classList.remove("think"); el.innerHTML = md(text); el.scrollIntoView({block: "end"}); } }}));
+    else out = await askAnthropic(turns, S.ctl.signal, ocr ? [] : files);
     const fd = takeFoodData(out); out = fd.text;
     S.chat.push({role: "assistant", content: out});
     if (fd.data && S.db) { try { await writeDaily([{date: todayISO(), ...fd.data}], "Captura de Samsung Health"); toast("He apuntado lo que llevas hoy"); } catch {} }
@@ -2076,7 +2126,7 @@ document.addEventListener("click", async ev => {
   if (ds.delbody) { try { await S.db.doc("body/" + ds.delbody).delete(); toast("Medición borrada"); } catch { toast("No se pudo borrar."); } S.confirmDel = null; return; }
   if (ds.dellog) { try { await S.db.doc("logs/" + ds.dellog).delete(); toast("Sesión borrada"); } catch { toast("No se pudo borrar."); } S.confirmDel = null; return; }
   if (ds.suggest) { S.showIdeas = false; send(ds.suggest); return; }
-  if (ds.unattach != null) { URL.revokeObjectURL(S.attachUrls[+ds.unattach]); S.attach.splice(+ds.unattach, 1); S.attachUrls.splice(+ds.unattach, 1); render(); return; }
+  if (ds.unattach != null) { URL.revokeObjectURL(S.attachUrls[+ds.unattach]); S.attach.splice(+ds.unattach, 1); S.attachUrls.splice(+ds.unattach, 1); (S.attachOcr || []).splice(+ds.unattach, 1); render(); return; }
   if (ds.delnote != null) { const p = JSON.parse(JSON.stringify(S.profile)); p.notes.splice(+ds.delnote, 1); S.confirmDel = null; await saveProfile(p); toast("Nota quitada"); return; }
   if (ds.delrem != null) { const p = JSON.parse(JSON.stringify(S.profile)); p.reminders.splice(+ds.delrem, 1); await saveProfile(p); toast("Recordatorio completado"); return; }
   if (ds.togglenote != null) { const p = JSON.parse(JSON.stringify(S.profile)); const n = p.notes[+ds.togglenote]; n.status = n.status === "Resuelto" ? "Pendiente" : "Resuelto"; await saveProfile(p); return; }
@@ -2113,7 +2163,8 @@ document.addEventListener("click", async ev => {
   if (a === "stop") { S.ctl?.abort(); return; }
   if (a === "askClear") { S.confirmClear = true; render(); return; }
   if (a === "clearChat") { S.chat = []; S.confirmClear = false; render(); persistChat(); return; }
-  if (a === "foodEdit") { S.foodEdit = !S.foodEdit; render(); return; }
+  if (a === "foodToggle") { S.foodOpen = !S.foodOpen; if (!S.foodOpen) S.foodEdit = false; render(); return; }
+  if (a === "foodEdit") { S.foodEdit = !S.foodEdit; S.foodOpen = true; render(); return; }
   if (a === "foodSave") {
     const d = {date: todayISO()}; for (const [k] of MAC_KEYS) { const v = num($("#fd-" + k)?.value); if (v != null) d[k] = v; }
     try { await writeDaily([d], "Manual"); S.foodEdit = false; toast("Comida de hoy actualizada"); } catch { toast("No se pudo guardar."); } render(); return;
