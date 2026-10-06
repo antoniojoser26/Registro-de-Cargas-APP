@@ -500,6 +500,9 @@ nav.tabs button{font-size:10px;letter-spacing:-.02em}
 .hrph img{width:100%;height:100%;object-fit:cover;display:block}.hrph.big{width:100%;height:auto}.hrph.big img{height:auto;object-fit:contain}
 .hrask{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px;border-left:4px solid var(--plate-red)}
 .hrdot{color:var(--plate-red)}
+
+.hrdrive{display:grid;gap:6px;background:var(--surface);border-radius:12px;padding:10px}
+.hrdi{display:flex;gap:10px;align-items:flex-start;cursor:pointer}.hrdi>span{display:flex;flex-direction:column;min-width:0}.hrdi b{font-weight:600;overflow-wrap:anywhere}
 </style>
 
 </head>
@@ -559,7 +562,7 @@ const S = {
   mcp: null, assets: null, videos: {}, vPlace: "gym", vAdd: null, vMode: "drive", driveFiles: null, driveState: "idle", driveErr: "", uploading: false,
   daily: [], nutMetric: "kcal", importing: "",
   editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, gcalWrite: lsGet("rc.gcalWrite") !== false, gcalMap: {}, showIdeas: false, attach: [], attachUrls: [], attachOcr: [], imgCaps: null, exporting: "", exportBusy: false,
-  backup: null, abMsg: "", hrEdit: null, hrOpen: null, hrFiles: [], hrUrls: [], hrNote: null, hrBusy: "", hrZoom: null, mobility: null, mobEdit: null, mobDraft: null, mobOpen: null, evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
+  backup: null, abMsg: "", hrEdit: null, hrOpen: null, hrFiles: [], hrUrls: [], hrNote: null, hrBusy: "", hrZoom: null, hrDrive: null, hrPick: null, hrFromDrive: null, mobility: null, mobEdit: null, mobDraft: null, mobOpen: null, evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
   apiKey: lsGet("rc.apikey") || "", apiModel: lsGet("rc.model") || ""
 };
 
@@ -1773,6 +1776,40 @@ async function hrCompress(file, max = 1600, q = 0.85) {
   const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
   return new Promise(ok => c.toBlob(b => ok(b), "image/jpeg", q));
 }
+/* Capturas de MyZone (o del reloj) guardadas desde el móvil en Drive → carpeta «Pulso (MyZone)». */
+async function hrDriveList(l) {
+  const f = S.profile?.drive?.pulse; if (!S.mcp || !f?.id) return;
+  S.hrDrive = "loading"; render();
+  try {
+    const pl = (await S.mcp.callTool("Google Drive", "search_files", {query: `parentId = '${f.id}' and mimeType contains 'image/'`, pageSize: 40, excludeContentSnippets: true}, {cache: false})).payload || {};
+    const used = new Map(); S.logs.forEach(x => (x.hr?.driveIds || []).forEach(id => used.set(id, x)));
+    S.hrDrive = (pl.files || []).filter(x => x?.id).map(x => ({id: String(x.id), title: String(x.title || "captura"), date: String(x.createdTime || x.modifiedTime || ""), size: +x.fileSize || 0, used: used.get(String(x.id))}))
+      .sort((a, b) => b.date.localeCompare(a.date));
+    // preselección: las del mismo día que la sesión y aún sin usar
+    const dayOf = d => d ? new Date(d).toLocaleDateString("sv-SE") : "";
+    S.hrPick = new Set(S.hrDrive.filter(x => dayOf(x.date) === l.date && !x.used).slice(0, 3).map(x => x.id));
+  } catch (e) { S.hrDrive = null; toast(driveErr(e)); }
+  render();
+}
+async function hrDriveUse() {
+  const ids = [...(S.hrPick || [])].slice(0, 3); if (!ids.length) { toast("Elige al menos una captura."); return; }
+  S.hrNote = $("#hr-note")?.value ?? S.hrNote; S.hrBusy = "Descargando de Drive…"; render();
+  try {
+    const files = [];
+    for (const id of ids) {
+      const meta = (S.hrDrive || []).find(x => x.id === id) || {};
+      if (meta.size > 10 * 1048576) throw {code: "tool_error", message: `«${meta.title}» pesa más de 10 MB`};
+      const pl = (await S.mcp.callTool("Google Drive", "download_file_content", {fileId: id}, {cache: false})).payload || {};
+      if (!pl.content) throw {code: "tool_error", message: "archivo vacío"};
+      const bin = atob(pl.content), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const t = String(pl.title || meta.title || "captura.jpg"), type = /\.png$/i.test(t) ? "image/png" : /\.webp$/i.test(t) ? "image/webp" : "image/jpeg";
+      files.push(new File([bytes], t, {type}));
+    }
+    (S.hrUrls || []).forEach(u => URL.revokeObjectURL(u));
+    S.hrFiles = files; S.hrUrls = files.map(f => URL.createObjectURL(f)); S.hrFromDrive = ids; S.hrDrive = null;
+  } catch (e) { toast(driveErr(e)); }
+  S.hrBusy = ""; render();
+}
 function hrBlock(l) {
   const h = l.hr;
   if (S.hrEdit === l.id) return hrForm(l);
@@ -1781,7 +1818,7 @@ function hrBlock(l) {
   const seg = (lbl, o, c) => o && (o.avg || o.max) ? `<div class="hrseg" style="--kc:${c}"><span class="eyebrow">${lbl}</span><b class="num">${o.avg ?? "–"}</b><small> media</small> · <b class="num">${o.max ?? "–"}</b><small> máx</small>${o.min != null && o.min !== "" ? ` · <span class="small muted">${o.min} min</span>` : ""}</div>` : "";
   const zones = h.zones && Object.values(h.zones).some(v => +v > 0) ? `<div class="hrzones" aria-label="Tiempo en zonas">${[1, 2, 3, 4, 5].map(z => { const v = +h.zones["z" + z] || 0; return v ? `<span class="z${z}" style="flex:${v}" title="Zona ${z}: ${v} %">Z${z} ${Math.round(v)}%</span>` : ""; }).join("")}</div>` : "";
   return `<div class="hrbox"><div class="row between"><div class="eyebrow">♥ Pulso</div><span class="pill ${ic}">Intensidad ${il.toLowerCase()}${h.score ? " · " + h.score + "/10" : ""}</span></div>
-    <div class="hrnums"><span><b class="num">${h.avg ?? "–"}</b><small>media</small></span><span><b class="num">${h.max ?? "–"}</b><small>máx</small></span>${h.dur ? `<span><b class="num">${h.dur}</b><small>min</small></span>` : ""}${h.kcal ? `<span><b class="num">${h.kcal}</b><small>kcal</small></span>` : ""}</div>
+    <div class="hrnums"><span><b class="num">${h.avg ?? "–"}</b><small>media</small></span><span><b class="num">${h.max ?? "–"}</b><small>máx</small></span>${h.dur ? `<span><b class="num">${h.dur}</b><small>min</small></span>` : ""}${h.kcal ? `<span><b class="num">${h.kcal}</b><small>kcal</small></span>` : ""}${h.meps ? `<span><b class="num">${h.meps}</b><small>MEPs</small></span>` : ""}${h.effort ? `<span><b class="num">${h.effort}%</b><small>esfuerzo</small></span>` : ""}</div>
     ${seg("Pesas", h.weights, "var(--plate-blue)")}${seg("Cardio", h.cardio, "var(--plate-red)")}${zones}
     ${h.summary ? `<p class="small" style="margin-top:8px">${esc(h.summary)}</p>` : ""}${h.note ? `<p class="small muted" style="margin-top:4px">Tu nota: ${esc(h.note)}</p>` : ""}
     ${(h.photos || []).length ? `<div class="hrphotos">${h.photos.map((x, i) => `<button class="hrph${S.hrZoom === l.id + ":" + i ? " big" : ""}" data-hrzoom="${l.id}:${i}" aria-label="Ver foto del pulso"><img src="${esc(hrPhotoSrc(x))}" alt="Gráfica de pulso ${i + 1}"></button>`).join("")}</div>` : ""}
@@ -1790,30 +1827,34 @@ function hrBlock(l) {
 function hrForm(l) {
   const h = l.hr || {}, f = S.hrFiles || [];
   const aiTxt = imagesOk() ? "Claude mirará la gráfica" : ocrMode() ? "La app leerá los números de la captura y Claude los interpretará" : !HOSTED && S.apiKey ? "Claude mirará la gráfica" : "Sin entrenador IA: rellena los números a mano";
-  return `<div class="hrbox stack" style="gap:10px"><div class="eyebrow">♥ Pulso del reloj · ${esc(l.day)} · ${fmtDate(l.date, {day: "numeric", month: "short"})}</div>
+  return `<div class="hrbox stack" style="gap:10px"><div class="eyebrow">♥ Pulso (MyZone o reloj) · ${esc(l.day)} · ${fmtDate(l.date, {day: "numeric", month: "short"})}</div>
     <div class="row" style="gap:8px;align-items:center"><label class="btn" for="hr-img">${f.length || (h.photos || []).length ? "Cambiar fotos" : "Añadir foto o captura"}</label><input type="file" id="hr-img" accept="image/*" multiple hidden>
       <span class="small muted">${f.length ? f.length + " foto" + (f.length > 1 ? "s" : "") + " nueva" + (f.length > 1 ? "s" : "") : (h.photos || []).length ? (h.photos.length + " guardada" + (h.photos.length > 1 ? "s" : "")) : "Gráfica de pulso y resumen del entreno"}</span></div>
-    ${f.length ? `<div class="hrphotos">${(S.hrUrls || []).map(u => `<span class="hrph"><img src="${u}" alt="Foto nueva"></span>`).join("")}</div>` : ""}
+    ${S.mcp && S.profile?.drive?.pulse?.id ? `<div class="row" style="gap:8px;align-items:center"><button class="btn" data-hrdrive="${l.id}" ${S.hrBusy || S.hrDrive === "loading" ? "disabled" : ""}>${S.hrDrive === "loading" ? "Buscando…" : "Elegir de Drive"}</button><span class="small muted">Carpeta «${esc(S.profile.drive.pulse.name || "Pulso (MyZone)")}»${S.profile.drive.pulse.url ? ` · <a href="${esc(S.profile.drive.pulse.url)}" target="_blank" rel="noopener">abrir ↗</a>` : ""}</span></div>` : ""}
+    ${Array.isArray(S.hrDrive) ? (S.hrDrive.length ? `<div class="hrdrive">${S.hrDrive.map(x => `<label class="hrdi"><input type="checkbox" data-hrpick="${esc(x.id)}" ${S.hrPick?.has(x.id) ? "checked" : ""}><span><b>${esc(x.title)}</b><span class="small muted">${x.date ? new Date(x.date).toLocaleString("es-ES", {weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : ""}${x.used ? ` · ya usada en ${esc(x.used.day.split(":")[0])} del ${fmtDate(x.used.date)}` : ""}</span></span></label>`).join("")}
+        <div class="row"><button class="btn primary" data-act="hrDriveUse">Usar seleccionadas</button><button class="btn ghost" data-act="hrDriveClose">Cerrar</button></div></div>`
+      : `<p class="small muted">La carpeta no tiene capturas todavía. Desde el móvil: haz la captura en MyZone → Compartir → Drive → carpeta «${esc(S.profile?.drive?.pulse?.name || "Pulso (MyZone)")}».</p>`) : ""}
+    ${f.length ? `<div class="hrphotos">${(S.hrUrls || []).map(u => `<span class="hrph"><img src="${u}" alt="Foto nueva"></span>`).join("")}</div>${S.hrFromDrive?.length ? `<p class="small muted">Desde Drive.</p>` : ""}` : ""}
     <div class="field"><label for="hr-note">¿Qué parte de la gráfica es pesas y cuál cardio?</label><textarea class="input" id="hr-note" rows="3" placeholder="Ej.: del minuto 0 al 55 pesas; del 55 al 80 cinta inclinada al 8 %. Los picos del principio son las series de press.">${esc(S.hrNote ?? h.note ?? "")}</textarea></div>
     <details ${h.avg || h.max ? "open" : ""}><summary class="small" style="cursor:pointer">Números a mano (opcional)</summary>
-      <div class="grid2" style="margin-top:8px">${[["avg", "Pulso medio"], ["max", "Pulso máximo"], ["dur", "Duración (min)"], ["kcal", "Calorías"]].map(([k, t]) => `<div class="field"><label for="hr-${k}">${t}</label><input class="input" id="hr-${k}" inputmode="numeric" value="${esc(h[k] ?? "")}"></div>`).join("")}</div></details>
+      <div class="grid2" style="margin-top:8px">${[["avg", "Pulso medio"], ["max", "Pulso máximo"], ["dur", "Duración (min)"], ["kcal", "Calorías"], ["meps", "MEPs (MyZone)"], ["effort", "Esfuerzo medio %"]].map(([k, t]) => `<div class="field"><label for="hr-${k}">${t}</label><input class="input" id="hr-${k}" inputmode="numeric" value="${esc(h[k] ?? "")}"></div>`).join("")}</div></details>
     <p class="small muted">${aiTxt}. Tu pulso máximo estimado es ${hrMax()} ppm (por tu edad).</p>
     <div class="row"><button class="btn primary" data-hrsave="${l.id}" ${S.hrBusy ? "disabled" : ""}>${S.hrBusy ? esc(S.hrBusy) : "Analizar y guardar"}</button><button class="btn ghost" data-act="hrCancel" ${S.hrBusy ? "disabled" : ""}>Cancelar</button>
       ${l.hr ? `<button class="btn ghost danger" data-hrdel="${l.id}" ${S.hrBusy ? "disabled" : ""}>Quitar pulso</button>` : ""}</div></div>`;
 }
 function hrPrompt(l, note, manual, ocrText) {
   const ses = (l.entries || []).map(e => e.cardio ? `${e.n}: ${e.min || "?"} min ${e.detail || ""}` : `${e.n}: ${(e.sets || []).length} series`).join("; ");
-  return `Analiza el pulso de un entrenamiento a partir de ${ocrText != null ? "el texto leído (OCR) de capturas" : "las imágenes adjuntas (capturas"} del reloj Samsung Galaxy Watch / Samsung Health${ocrText != null ? "" : ")"}. Usuario de ${hrAge()} años, pulso máximo estimado ${hrMax()} ppm.
+  return `Analiza el pulso de un entrenamiento a partir de ${ocrText != null ? "el texto leído (OCR) de capturas" : "las imágenes adjuntas (capturas"} de la app MyZone (cinta MZ-3) o del reloj Samsung Galaxy Watch / Samsung Health${ocrText != null ? "" : ")"}. En MyZone las zonas por color son: gris 50-59 %, azul 60-69 %, verde 70-79 %, amarillo 80-89 % y rojo 90-100 % del pulso máximo, y muestra MEPs (puntos de esfuerzo) y el esfuerzo medio en %; si la captura trae su propio pulso máximo o sus zonas, usa los de la captura. Usuario de ${hrAge()} años, pulso máximo estimado ${hrMax()} ppm.
 Sesión registrada: ${l.day} (${l.place === "home" ? "casa" : "gimnasio"}, ${l.date}). Ejercicios: ${ses || "—"}.
 Nota del usuario sobre qué tramo es pesas y cuál cardio: ${note || "(sin nota)"}.
 Datos a mano: ${JSON.stringify(manual)}.
 ${ocrText != null ? "No puedes ver la gráfica, solo este texto; no inventes valores de tramos que no aparezcan (pon null).\nTEXTO:\n" + ocrText.slice(0, 5000) + "\n" : ""}
-Devuelve SOLO un objeto JSON: {"avg": ppm medio, "max": ppm máximo, "min": ppm mínimo, "dur": minutos, "kcal": kcal, "zones": {"z1": %, "z2": %, "z3": %, "z4": %, "z5": %} (% del tiempo en zonas de 50-60/60-70/70-80/80-90/90-100 % del pulso máximo; null si no se puede), "weights": {"avg": ppm, "max": ppm, "min": minutos} del tramo de pesas, "cardio": {"avg": ppm, "max": ppm, "min": minutos} del tramo de cardio (usa la nota del usuario para separar los tramos en la gráfica), "intensity": "baja"|"moderada"|"alta"|"muy alta", "score": 1-10, "summary": "2-3 frases en español de España, de tú: cómo fue la intensidad de las pesas y del cardio, si los descansos se ven suficientes (el pulso baja entre series) y una recomendación"}. Usa números enteros y null donde no haya dato.`;
+Devuelve SOLO un objeto JSON: {"meps": MEPs de MyZone o null, "effort": esfuerzo medio en % o null, "avg": ppm medio, "max": ppm máximo, "min": ppm mínimo, "dur": minutos, "kcal": kcal, "zones": {"z1": %, "z2": %, "z3": %, "z4": %, "z5": %} (% del tiempo en zonas de 50-60/60-70/70-80/80-90/90-100 % del pulso máximo; null si no se puede), "weights": {"avg": ppm, "max": ppm, "min": minutos} del tramo de pesas, "cardio": {"avg": ppm, "max": ppm, "min": minutos} del tramo de cardio (usa la nota del usuario para separar los tramos en la gráfica), "intensity": "baja"|"moderada"|"alta"|"muy alta", "score": 1-10, "summary": "2-3 frases en español de España, de tú: cómo fue la intensidad de las pesas y del cardio, si los descansos se ven suficientes (el pulso baja entre series) y una recomendación"}. Usa números enteros y null donde no haya dato.`;
 }
 async function hrSave(id) {
   const l = S.logs.find(x => x.id === id); if (!l) return;
   const files = S.hrFiles || [], note = ($("#hr-note")?.value || "").trim();
-  const manual = {}; for (const k of ["avg", "max", "dur", "kcal"]) { const v = num($("#hr-" + k)?.value); if (v != null) manual[k] = Math.round(v); }
+  const manual = {}; for (const k of ["avg", "max", "dur", "kcal", "meps", "effort"]) { const v = num($("#hr-" + k)?.value); if (v != null) manual[k] = Math.round(v); }
   S.hrNote = note; S.hrBusy = "Guardando fotos…"; render();
   try {
     let photos = (l.hr?.photos || []).slice();
@@ -1845,7 +1886,9 @@ async function hrSave(id) {
     }
     const intN = v => v == null || v === "" || isNaN(+v) ? null : Math.round(+v);
     const segN = o => o && typeof o === "object" ? {avg: intN(o.avg), max: intN(o.max), min: intN(o.min)} : null;
-    const hr = {photos, note, source, at: new Date().toISOString(),
+    const driveIds = blobs.length ? (S.hrFromDrive || []) : (l.hr?.driveIds || []);
+    const hr = {photos, note, source, at: new Date().toISOString(), driveIds,
+      meps: manual.meps ?? intN(ai?.meps), effort: manual.effort ?? intN(ai?.effort),
       avg: manual.avg ?? intN(ai?.avg), max: manual.max ?? intN(ai?.max), min: intN(ai?.min), dur: manual.dur ?? intN(ai?.dur), kcal: manual.kcal ?? intN(ai?.kcal),
       zones: ai?.zones && typeof ai.zones === "object" ? Object.fromEntries([1, 2, 3, 4, 5].map(z => [`z${z}`, intN(ai.zones["z" + z]) ?? 0])) : null,
       weights: segN(ai?.weights), cardio: segN(ai?.cardio), score: intN(ai?.score), summary: typeof ai?.summary === "string" ? ai.summary.slice(0, 800) : ""};
@@ -1856,16 +1899,16 @@ async function hrSave(id) {
   } catch (e) { toast(e?.code === "quota_exceeded" ? "No queda espacio para más fotos." : "No se pudo guardar el pulso."); S.hrBusy = ""; }
   render();
 }
-function hrReset() { (S.hrUrls || []).forEach(u => URL.revokeObjectURL(u)); S.hrEdit = null; S.hrFiles = []; S.hrUrls = []; S.hrNote = null; S.hrBusy = ""; }
+function hrReset() { (S.hrUrls || []).forEach(u => URL.revokeObjectURL(u)); S.hrEdit = null; S.hrFiles = []; S.hrUrls = []; S.hrNote = null; S.hrBusy = ""; S.hrDrive = null; S.hrPick = null; S.hrFromDrive = null; }
 function hrPendingCard() {
   const l = S.logs.find(x => !x.hr && x.date >= isoAdd(todayISO(), -2)); if (!l || S.hrEdit && S.hrEdit !== l.id) return "";
   if (S.hrEdit === l.id) return `<section>${hrForm(l)}</section>`;
-  return `<div class="panel hrask"><div><b>¿Añades el pulso de tu sesión?</b><div class="small muted">${esc(l.day)} · ${fmtDate(l.date, {weekday: "long", day: "numeric"})}. Sube la captura de la gráfica de tu reloj y sabré la intensidad de las pesas y del cardio.</div></div><button class="btn primary" data-hredit="${l.id}">♥ Añadir pulso</button></div>`;
+  return `<div class="panel hrask"><div><b>¿Añades el pulso de tu sesión?</b><div class="small muted">${esc(l.day)} · ${fmtDate(l.date, {weekday: "long", day: "numeric"})}. Sube la captura de MyZone o de tu reloj (también desde Drive) y sabré la intensidad de las pesas y del cardio.</div></div><button class="btn primary" data-hredit="${l.id}">♥ Añadir pulso</button></div>`;
 }
 function hrLogText(h) {
   if (!h) return "";
   const sg = (l, o) => o && (o.avg || o.max) ? ` · ${l}: media ${o.avg ?? "?"} máx ${o.max ?? "?"}${o.min ? " (" + o.min + " min)" : ""}` : "";
-  return `pulso medio ${h.avg ?? "?"} máx ${h.max ?? "?"}${h.dur ? ", " + h.dur + " min" : ""}${h.kcal ? ", " + h.kcal + " kcal" : ""}, intensidad ${h.intensity || "?"}${h.score ? " " + h.score + "/10" : ""}${sg("pesas", h.weights)}${sg("cardio", h.cardio)}${h.zones ? " · zonas " + [1, 2, 3, 4, 5].map(z => "Z" + z + " " + (h.zones["z" + z] || 0) + "%").join(" ") : ""}${h.note ? ` · nota: ${h.note}` : ""}${h.summary ? ` · análisis: ${h.summary}` : ""}`;
+  return `pulso medio ${h.avg ?? "?"} máx ${h.max ?? "?"}${h.dur ? ", " + h.dur + " min" : ""}${h.kcal ? ", " + h.kcal + " kcal" : ""}${h.meps ? ", " + h.meps + " MEPs" : ""}${h.effort ? ", esfuerzo medio " + h.effort + "%" : ""}, intensidad ${h.intensity || "?"}${h.score ? " " + h.score + "/10" : ""}${sg("pesas", h.weights)}${sg("cardio", h.cardio)}${h.zones ? " · zonas " + [1, 2, 3, 4, 5].map(z => "Z" + z + " " + (h.zones["z" + z] || 0) + "%").join(" ") : ""}${h.note ? ` · nota: ${h.note}` : ""}${h.summary ? ` · análisis: ${h.summary}` : ""}`;
 }
 
 /* ---------- vista: entrenador ---------- */
@@ -2199,8 +2242,8 @@ function buildTables() {
   for (const l of logs) for (const [k, t] of [["warm", "calentamiento"], ["stretch", "estiramiento"]]) (l[k] || []).forEach(x => mob.push([l.date, place(l.place), l.day, t, x.n, x.done ? "sí" : "no", l.id]));
   const evolt = [["fecha", "hora", "peso_kg", "masa_magra_kg", "musculo_esqueletico_kg", "proteina_kg", "minerales_kg", "agua_kg", "masa_grasa_kg", "grasa_pct", "grasa_subcutanea_kg", "grasa_visceral_kg", "nivel_visceral", "area_visceral_cm2", "bmr_kcal", "tee_kcal", "edad_biologica", "bwi", "abdomen_cm", "cintura_cadera", ...EV_ZONES.flatMap(([z]) => [z + "_musculo_kg", z + "_grasa_kg"])],
       ...evScans().reverse().map(e => [e.date, e.time, e.weight, e.lbm?.v, e.smm?.v, e.protein?.v, e.minerals?.v, e.tbw?.v, e.bfm?.v, e.bfp?.v, e.subq?.v, e.visMass?.v, e.vfl?.v, e.vfa?.v, e.bmr, e.tee, e.bioAge, e.bwi, e.waist?.v, e.whr?.v, ...EV_ZONES.flatMap(([z]) => [e.seg?.[z]?.lean?.v, e.seg?.[z]?.fat?.v])])];
-  const pulse = [["fecha", "lugar", "dia", "pulso_medio", "pulso_max", "pulso_min", "duracion_min", "kcal", "intensidad", "puntuacion", "pesas_media", "pesas_max", "pesas_min", "cardio_media", "cardio_max", "cardio_min", "z1_pct", "z2_pct", "z3_pct", "z4_pct", "z5_pct", "nota", "analisis", "id_sesion"]];
-  for (const l of logs) if (l.hr) { const h = l.hr; pulse.push([l.date, place(l.place), l.day, h.avg, h.max, h.min, h.dur, h.kcal, h.intensity, h.score, h.weights?.avg, h.weights?.max, h.weights?.min, h.cardio?.avg, h.cardio?.max, h.cardio?.min, ...[1, 2, 3, 4, 5].map(z => h.zones?.["z" + z]), h.note, h.summary, l.id]); }
+  const pulse = [["fecha", "lugar", "dia", "pulso_medio", "pulso_max", "pulso_min", "duracion_min", "kcal", "meps", "esfuerzo_pct", "intensidad", "puntuacion", "pesas_media", "pesas_max", "pesas_min", "cardio_media", "cardio_max", "cardio_min", "z1_pct", "z2_pct", "z3_pct", "z4_pct", "z5_pct", "nota", "analisis", "id_sesion"]];
+  for (const l of logs) if (l.hr) { const h = l.hr; pulse.push([l.date, place(l.place), l.day, h.avg, h.max, h.min, h.dur, h.kcal, h.meps, h.effort, h.intensity, h.score, h.weights?.avg, h.weights?.max, h.weights?.min, h.cardio?.avg, h.cardio?.max, h.cardio?.min, ...[1, 2, 3, 4, 5].map(z => h.zones?.["z" + z]), h.note, h.summary, l.id]); }
   return [["Series", "series.csv", series], ["Pulso", "pulso.csv", pulse], ["Cardio", "cardio.csv", cardio], ["Calentamiento", "calentamiento_estiramientos.csv", mob], ["Composición", "composicion_corporal.csv", body], ["Nutrición", "nutricion_y_pasos.csv", daily], ["EVOLT", "evolt.csv", evolt], ["Rutinas", "rutinas.csv", plans]];
 }
 function buildExport() {
@@ -2385,6 +2428,7 @@ document.addEventListener("click", async ev => {
   if (ds.delev) { try { await S.db.doc("evolt/" + ds.delev).delete(); S.confirmDel = null; toast("Escaneo borrado (la medición de Progreso se mantiene)"); } catch { toast("No se pudo borrar."); } return; }
   if (ds.hredit) { hrReset(); S.hrEdit = ds.hredit; S.hrOpen = ds.hredit; render(); setTimeout(() => $("#hr-note")?.scrollIntoView({block: "center"}), 50); return; }
   if (ds.hrsave) return hrSave(ds.hrsave);
+  if (ds.hrdrive) { S.hrNote = $("#hr-note")?.value ?? S.hrNote; const l = S.logs.find(x => x.id === ds.hrdrive); if (l) hrDriveList(l); return; }
   if (ds.hrdel) { const l = S.logs.find(x => x.id === ds.hrdel); if (l) { const {id, hr, ...rest} = l; try { await S.db.doc("logs/" + id).set(rest); hrReset(); toast("Pulso quitado"); } catch { toast("No se pudo quitar."); } } render(); return; }
   if (ds.hrzoom) { S.hrZoom = S.hrZoom === ds.hrzoom ? null : ds.hrzoom; render(); return; }
   if (ds.mobchk) {
@@ -2480,6 +2524,8 @@ document.addEventListener("click", async ev => {
   if (a === "stop") { S.ctl?.abort(); return; }
   if (a === "askClear") { S.confirmClear = true; render(); return; }
   if (a === "clearChat") { S.chat = []; S.confirmClear = false; render(); persistChat(); return; }
+  if (a === "hrDriveUse") return hrDriveUse();
+  if (a === "hrDriveClose") { S.hrDrive = null; render(); return; }
   if (a === "hrCancel") { hrReset(); render(); return; }
   if (a === "abNow") { abGranted = null; return runBackup(true); }
   if (a === "abToggle") { const on = S.backup?.enabled !== false; try { await S.db.doc("backup/auto").set({...(S.backup || {}), enabled: !on}); toast(on ? "Copia automática desactivada" : "Copia automática activada"); if (!on) runBackup(true); } catch { toast("No se pudo cambiar."); } return; }
@@ -2604,7 +2650,7 @@ document.addEventListener("input", ev => {
   else if (t.id === "sdate") { S.draft.date = t.value; saveDraftLocal(); }
   else if (t.id === "ask") { S.askDraft = t.value; t.style.height = "auto"; t.style.height = Math.min(160, t.scrollHeight) + "px"; }
 });
-document.addEventListener("change", ev => { if (ev.target.id === "hr-img") { S.hrNote = $("#hr-note")?.value ?? S.hrNote; (S.hrUrls || []).forEach(u => URL.revokeObjectURL(u)); S.hrFiles = [...ev.target.files].filter(f => /^image\//.test(f.type)).slice(0, 3); S.hrUrls = S.hrFiles.map(f => URL.createObjectURL(f)); render(); return; } if (ev.target.id === "gcalWrite") { S.gcalWrite = ev.target.checked; lsSet("rc.gcalWrite", S.gcalWrite); render(); return; } if (ev.target.dataset?.shpick) { S.shPick = S.shPick || new Set(); ev.target.checked ? S.shPick.add(ev.target.dataset.shpick) : S.shPick.delete(ev.target.dataset.shpick); return; } if (ev.target.id === "coachImg") { addAttach([...ev.target.files]); ev.target.value = ""; return; } if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
+document.addEventListener("change", ev => { if (ev.target.dataset?.hrpick) { S.hrPick = S.hrPick || new Set(); ev.target.checked ? S.hrPick.add(ev.target.dataset.hrpick) : S.hrPick.delete(ev.target.dataset.hrpick); return; } if (ev.target.id === "hr-img") { S.hrNote = $("#hr-note")?.value ?? S.hrNote; (S.hrUrls || []).forEach(u => URL.revokeObjectURL(u)); S.hrFromDrive = null; S.hrFiles = [...ev.target.files].filter(f => /^image\//.test(f.type)).slice(0, 3); S.hrUrls = S.hrFiles.map(f => URL.createObjectURL(f)); render(); return; } if (ev.target.id === "gcalWrite") { S.gcalWrite = ev.target.checked; lsSet("rc.gcalWrite", S.gcalWrite); render(); return; } if (ev.target.dataset?.shpick) { S.shPick = S.shPick || new Set(); ev.target.checked ? S.shPick.add(ev.target.dataset.shpick) : S.shPick.delete(ev.target.dataset.shpick); return; } if (ev.target.id === "coachImg") { addAttach([...ev.target.files]); ev.target.value = ""; return; } if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
 document.addEventListener("paste", ev => { if (ev.target.id !== "ask" || !imagesOk()) return; const imgs = [...(ev.clipboardData?.files || [])].filter(f => f.type.startsWith("image/")); if (imgs.length) { ev.preventDefault(); addAttach(imgs); } });
 document.addEventListener("toggle", ev => { const m = /^mob-(warm|stretch)$/.exec(ev.target.id || ""); if (m) { S.mobOpen = S.mobOpen || {}; S.mobOpen[m[1]] = ev.target.open; } }, true);
 document.addEventListener("toggle", ev => { if (ev.target.id === "evImp") S.evOpen = ev.target.open; }, true);
