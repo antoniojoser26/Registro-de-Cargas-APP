@@ -1770,7 +1770,8 @@ ${sc.slice(1, 6).map(x => `Escaneo ${x.date}: peso ${x.weight} kg, grasa ${x.bfp
              intensity, score (1-10), summary, source, at} */
 const HR_LBL = {baja: ["Baja", "keep"], moderada: ["Moderada", "good"], alta: ["Alta", "warn"], "muy alta": ["Muy alta", "up"]};
 function hrAge() { const e = (S.evolt || []).find(x => x.age); return +(S.profile?.age || e?.age || 30); }
-const hrMax = () => Math.round(208 - 0.7 * hrAge());
+/* Pulso máximo: el calibrado con MyZone (pulso medio ÷ esfuerzo medio) o, si no hay, la fórmula de MyZone 211 − 0,64 × edad. */
+const hrMax = () => +S.profile?.hrMax || Math.round(211 - 0.64 * hrAge());
 function hrIntensity(avg) { if (!avg) return null; const p = avg / hrMax(); return p < 0.6 ? "baja" : p < 0.7 ? "moderada" : p < 0.8 ? "alta" : "muy alta"; }
 const hrPhotoSrc = x => String(x).startsWith("data:") ? x : "/_blob/" + x;
 async function hrCompress(file, max = 1600, q = 0.85) {
@@ -1904,7 +1905,7 @@ function hrBlock(l) {
   const seg = (lbl, o, c) => o && (o.avg || o.max) ? `<div class="hrseg" style="--kc:${c}"><span class="eyebrow">${lbl}</span><b class="num">${o.avg ?? "–"}</b><small> media</small> · <b class="num">${o.max ?? "–"}</b><small> máx</small>${o.min != null && o.min !== "" ? ` · <span class="small muted">${o.min} min</span>` : ""}</div>` : "";
   const zones = h.zones && Object.values(h.zones).some(v => +v > 0) ? `<div class="hrzones" aria-label="Tiempo en zonas">${[1, 2, 3, 4, 5].map(z => { const v = +h.zones["z" + z] || 0; return v ? `<span class="z${z}" style="flex:${v}" title="Zona ${z}: ${v} %">Z${z} ${Math.round(v)}%</span>` : ""; }).join("")}</div>` : "";
   return `<div class="hrbox"><div class="row between"><div class="eyebrow">♥ Pulso</div><span class="pill ${ic}">Intensidad ${il.toLowerCase()}${h.score ? " · " + h.score + "/10" : ""}</span></div>
-    <div class="hrnums"><span><b class="num">${h.avg ?? "–"}</b><small>media</small></span><span><b class="num">${h.max ?? "–"}</b><small>máx</small></span>${h.dur ? `<span><b class="num">${h.dur}</b><small>min</small></span>` : ""}${h.kcal ? `<span><b class="num">${h.kcal}</b><small>kcal</small></span>` : ""}${h.meps ? `<span><b class="num">${h.meps}</b><small>MEPs</small></span>` : ""}${h.effort ? `<span><b class="num">${h.effort}%</b><small>esfuerzo${h.effortMax ? " · máx " + h.effortMax + "%" : ""}</small></span>` : ""}</div>
+    <div class="hrnums"><span><b class="num">${h.avg ?? "–"}</b><small>${h.avgEst ? "≈ " : ""}ppm media</small></span><span><b class="num">${h.max ?? "–"}</b><small>${h.maxEst ? "≈ " : ""}ppm máx</small></span>${h.dur ? `<span><b class="num">${h.dur}</b><small>min</small></span>` : ""}${h.kcal ? `<span><b class="num">${h.kcal}</b><small>kcal</small></span>` : ""}${h.meps ? `<span><b class="num">${h.meps}</b><small>MEPs</small></span>` : ""}${h.effort ? `<span><b class="num">${h.effort}%</b><small>esfuerzo${h.effortMax ? " · máx " + h.effortMax + "%" : ""}</small></span>` : ""}</div>
     ${h.series ? `<div style="margin-top:8px">${mzChartSvg(h.series)}</div>` : ""}${seg("Pesas", h.weights, "var(--plate-blue)")}${seg("Cardio", h.cardio, "var(--plate-red)")}${zones}
     ${h.summary ? `<p class="small" style="margin-top:8px">${esc(h.summary)}</p>` : ""}${h.note ? `<p class="small muted" style="margin-top:4px">Tu nota: ${esc(h.note)}</p>` : ""}
     ${(h.photos || []).length ? `<div class="hrphotos">${h.photos.map((x, i) => `<button class="hrph${S.hrZoom === l.id + ":" + i ? " big" : ""}" data-hrzoom="${l.id}:${i}" aria-label="Ver foto del pulso"><img src="${esc(hrPhotoSrc(x))}" alt="Gráfica de pulso ${i + 1}"></button>`).join("")}</div>` : ""}
@@ -1924,13 +1925,13 @@ function hrForm(l) {
     <div class="field"><label for="hr-note">¿Qué parte de la gráfica es pesas y cuál cardio?</label><textarea class="input" id="hr-note" rows="3" placeholder="Ej.: del minuto 0 al 55 pesas; del 55 al 80 cinta inclinada al 8 %. Los picos del principio son las series de press.">${esc(S.hrNote ?? h.note ?? "")}</textarea></div>
     <details ${h.avg || h.max ? "open" : ""}><summary class="small" style="cursor:pointer">Números a mano (opcional)</summary>
       <div class="grid2" style="margin-top:8px">${[["avg", "Pulso medio"], ["max", "Pulso máximo"], ["dur", "Duración (min)"], ["kcal", "Calorías"], ["meps", "MEPs (MyZone)"], ["effort", "Esfuerzo medio %"]].map(([k, t]) => `<div class="field"><label for="hr-${k}">${t}</label><input class="input" id="hr-${k}" inputmode="numeric" value="${esc(h[k] ?? "")}"></div>`).join("")}</div></details>
-    <p class="small muted">${aiTxt}. Tu pulso máximo estimado es ${hrMax()} ppm (por tu edad).</p>
+    <p class="small muted">${aiTxt}. Tu pulso máximo es ${hrMax()} ppm ${S.profile?.hrMax ? `(calibrado con MyZone${S.profile.hrMaxFrom?.date ? " el " + fmtDate(S.profile.hrMaxFrom.date) : ""})` : "(estimado por tu edad)"}. Si escribes en «Números a mano» el pulso medio que te da MyZone, la app lo vuelve a calibrar.</p>
     <div class="row"><button class="btn primary" data-hrsave="${l.id}" ${S.hrBusy ? "disabled" : ""}>${S.hrBusy ? esc(S.hrBusy) : "Analizar y guardar"}</button><button class="btn ghost" data-act="hrCancel" ${S.hrBusy ? "disabled" : ""}>Cancelar</button>
       ${l.hr ? `<button class="btn ghost danger" data-hrdel="${l.id}" ${S.hrBusy ? "disabled" : ""}>Quitar pulso</button>` : ""}</div></div>`;
 }
 function hrPrompt(l, note, manual, ocrText) {
   const ses = (l.entries || []).map(e => e.cardio ? `${e.n}: ${e.min || "?"} min ${e.detail || ""}` : `${e.n}: ${(e.sets || []).length} series`).join("; ");
-  return `Analiza el pulso de un entrenamiento a partir de ${ocrText != null ? "el texto leído (OCR) de capturas" : "las imágenes adjuntas (capturas"} de la app MyZone (cinta MZ-3) o del reloj Samsung Galaxy Watch / Samsung Health${ocrText != null ? "" : ")"}. En MyZone las zonas por color son: gris 50-59 %, azul 60-69 %, verde 70-79 %, amarillo 80-89 % y rojo 90-100 % del pulso máximo, y muestra MEPs (puntos de esfuerzo) y el esfuerzo medio en %; si la captura trae su propio pulso máximo o sus zonas, usa los de la captura. Usuario de ${hrAge()} años, pulso máximo estimado ${hrMax()} ppm.
+  return `Analiza el pulso de un entrenamiento a partir de ${ocrText != null ? "el texto leído (OCR) de capturas" : "las imágenes adjuntas (capturas"} de la app MyZone (cinta MZ-3) o del reloj Samsung Galaxy Watch / Samsung Health${ocrText != null ? "" : ")"}. En MyZone las zonas por color son: gris 50-59 %, azul 60-69 %, verde 70-79 %, amarillo 80-89 % y rojo 90-100 % del pulso máximo, y muestra MEPs (puntos de esfuerzo) y el esfuerzo medio en %; si la captura trae su propio pulso máximo o sus zonas, usa los de la captura. Usuario de ${hrAge()} años, pulso máximo ${hrMax()} ppm${S.profile?.hrMax ? " (calibrado con sus datos de MyZone)" : ""}; en MyZone, ppm ≈ esfuerzo % × ${(hrMax() / 100).toFixed(2)}.
 Sesión registrada: ${l.day} (${l.place === "home" ? "casa" : "gimnasio"}, ${l.date}). Ejercicios: ${ses || "—"}.
 Nota del usuario sobre qué tramo es pesas y cuál cardio: ${note || "(sin nota)"}.
 Datos a mano: ${JSON.stringify(manual)}.
@@ -1983,6 +1984,10 @@ async function hrSave(id) {
       avg: manual.avg ?? intN(ai?.avg), max: manual.max ?? intN(ai?.max), min: intN(ai?.min), dur: durMin ?? intN(ai?.dur), kcal: manual.kcal ?? sum.kcal ?? intN(ai?.kcal),
       zones: chart ? chart.zones : ai?.zones && typeof ai.zones === "object" ? Object.fromEntries([1, 2, 3, 4, 5].map(z => [`z${z}`, intN(ai.zones["z" + z]) ?? 0])) : null,
       weights: segN(ai?.weights), cardio: segN(ai?.cardio), score: intN(ai?.score), summary: typeof ai?.summary === "string" ? ai.summary.slice(0, 800) : ""};
+    // Calibración: si das el pulso medio de MyZone y se conoce el esfuerzo medio, se ajusta tu pulso máximo
+    if (manual.avg && hr.effort && !S.profile?.hrMaxLocked) { const m = Math.round(manual.avg * 100 / hr.effort); if (m > 150 && m < 235 && m !== +S.profile?.hrMax) { await saveProfile({...S.profile, hrMax: m, hrMaxFrom: {date: l.date, avg: manual.avg, effort: hr.effort}}); toast(`Pulso máximo ajustado a ${m} ppm`); } }
+    if (!hr.avg && hr.effort) { hr.avg = Math.round(hr.effort * hrMax() / 100); hr.avgEst = true; }
+    if (!hr.max && hr.effortMax) { hr.max = Math.round(hr.effortMax * hrMax() / 100); hr.maxEst = true; }
     hr.intensity = HR_LBL[ai?.intensity] ? ai.intensity : hr.effort ? (hr.effort < 60 ? "baja" : hr.effort < 70 ? "moderada" : hr.effort < 80 ? "alta" : "muy alta") : hrIntensity(hr.avg);
     if (!hr.avg && !hr.max && !photos.length && !note) { toast("Añade una foto, una nota o los números."); S.hrBusy = ""; render(); return; }
     const {id: _i, ...rest} = l; await S.db.doc("logs/" + id).set({...rest, hr});
@@ -2183,7 +2188,7 @@ function rules() {
 - Ten en cuenta su horario de trabajo: en semanas de tarde suele entrenar por la mañana y en semanas de mañana por la tarde; los días de teletrabajo entrena en casa con la rutina de casa. Ajusta volumen, horario de comidas y descanso a su turno (tienes el horario de cada código de turno).
 - Los pesajes son revisiones con su entrenador del gimnasio en las que mide su composición corporal y reajustan ejercicios. Si se acerca uno, ayúdale a preparar qué preguntar y qué revisar; después, analiza el resultado frente a sus objetivos.
 - Si pregunta por su EVOLT, explícalo en lenguaje sencillo: qué significa cada dato, qué está en rango y qué no, cómo ha cambiado desde el escaneo anterior y qué hacer (entreno y comida). Compara la recomendación de EVOLT con sus macros objetivo.
-- Pulso: algunas sesiones traen PULSO (del reloj). Úsalo para juzgar la intensidad real (pesas vs cardio, descansos, zonas) y la recuperación; compáralo entre sesiones del mismo día de rutina. Su pulso máximo estimado es ${hrMax()} ppm. En la curva de esfuerzo de MyZone, "!" marca minutos en zona amarilla o roja.
+- Pulso: algunas sesiones traen PULSO (del reloj). Úsalo para juzgar la intensidad real (pesas vs cardio, descansos, zonas) y la recuperación; compáralo entre sesiones del mismo día de rutina. Su pulso máximo (calibrado con MyZone si consta) es ${hrMax()} ppm: esfuerzo % de MyZone × ${(hrMax() / 100).toFixed(2)} = ppm. En la curva de esfuerzo de MyZone, "!" marca minutos en zona amarilla o roja.
 - Comidas del día: usa su OBJETIVO DIARIO y lo que lleva HOY para calcular lo que le queda (kcal y gramos de proteína, hidratos y grasas). Cuando pregunte qué comer, propone las siguientes comidas que encajen en lo que le queda, según la hora y su turno de trabajo (cuántas comidas le quedan, cena ligera si es tarde, comida transportable si trabaja presencial), con cantidades en gramos y macros aproximados de cada plato. Prioriza llegar a la proteína.
 - En nutrición da ejemplos prácticos con comida española habitual y cantidades aproximadas.
 - Si menciona dolor, lesión, mareo u otro síntoma médico, recomienda parar y consultar con un profesional sanitario; no diagnostiques.
