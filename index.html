@@ -483,7 +483,7 @@ nav.tabs button{font-size:10px;letter-spacing:-.02em}
 .mobit .mn{min-width:0;font-weight:500}.mobit .md{font-size:12.5px;color:var(--muted);text-align:right;white-space:nowrap}
 .mobblk{margin-bottom:10px}.mobul{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:4px}
 .mobul li{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:4px 0;border-bottom:1px solid var(--line)}.mobul li:last-child{border-bottom:0}
-.mobrow{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:6px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.mobrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,130px) 40px;gap:6px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .mobrow>input:first-child{grid-column:1/-1}
 .mobrow .btn{min-width:0;padding:4px}
 .mobdays{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.mobdays .chip{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
@@ -758,9 +758,11 @@ function progPill(p) {
 /* ---------- calentamiento y estiramientos ---------- */
 /* mobility/main: {blocks: [{id, name, warm: [{n, d}], stretch: [{n, d}]}], assign: {gym: [id|null por día], home: [...]}} */
 const MOB_KINDS = [["warm", "Calentamiento", "Antes de empezar"], ["stretch", "Estiramientos", "Al terminar"]];
+const MOB_P = {gym: "solo gimnasio", home: "solo casa"};
+const mobItems = (b, kind, place) => (b?.[kind] || []).filter(x => !x.p || x.p === place);
 function mobBlockFor(place, idx) { const m = S.mobility, id = m?.assign?.[place]?.[idx]; return id ? (m.blocks || []).find(b => b.id === id) || null : null; }
 function mobCard(kind) {
-  const b = mobBlockFor(S.place, S.dayIdx), list = b?.[kind] || []; if (!list.length) return "";
+  const b = mobBlockFor(S.place, S.dayIdx), list = mobItems(b, kind, S.place); if (!list.length) return "";
   const [, title, when] = MOB_KINDS.find(k => k[0] === kind), done = S.draft.mob?.[kind] || {};
   const n = list.filter(x => done[x.n]).length, all = n === list.length, open = S.mobOpen?.[kind] ?? !all;
   return `<details class="mobcard ${kind}${all ? " all" : ""}" id="mob-${kind}" ${open ? "open" : ""}><summary>
@@ -776,25 +778,25 @@ function mobLogText(l) {
 function mobContext() {
   const m = S.mobility; if (!m?.blocks?.length) return "";
   const days = pl => (S.plans[pl]?.days || []).map((d, i) => { const b = mobBlockFor(pl, i); return b ? `${d.name} → ${b.name}` : null; }).filter(Boolean).join("; ");
-  return m.blocks.map(b => `${b.name}:\n  Calentamiento: ${(b.warm || []).map(x => x.n + (x.d ? " (" + x.d + ")" : "")).join("; ") || "—"}\n  Estiramientos: ${(b.stretch || []).map(x => x.n + (x.d ? " (" + x.d + ")" : "")).join("; ") || "—"}`).join("\n")
+  return m.blocks.map(b => `${b.name}:\n  Calentamiento: ${(b.warm || []).map(x => x.n + (x.d ? " (" + x.d + ")" : "") + (x.p ? " [" + MOB_P[x.p] + "]" : "")).join("; ") || "—"}\n  Estiramientos: ${(b.stretch || []).map(x => x.n + (x.d ? " (" + x.d + ")" : "") + (x.p ? " [" + MOB_P[x.p] + "]" : "")).join("; ") || "—"}`).join("\n")
     + `\nGimnasio: ${days("gym") || "—"}\nCasa: ${days("home") || "—"}`;
 }
 /* Editor en Rutinas */
 function syncMobDraft() {
   const b = S.mobDraft; if (!b) return;
   const nm = $("#mob-name"); if (nm) b.name = nm.value;
-  for (const [k] of MOB_KINDS) (b[k] || []).forEach((x, i) => { const n = $(`#mob-${k}-${i}-n`), d = $(`#mob-${k}-${i}-d`); if (n) x.n = n.value; if (d) x.d = d.value; });
+  for (const [k] of MOB_KINDS) (b[k] || []).forEach((x, i) => { const n = $(`#mob-${k}-${i}-n`), d = $(`#mob-${k}-${i}-d`), pp = $(`#mob-${k}-${i}-p`); if (n) x.n = n.value; if (d) x.d = d.value; if (pp) x.p = pp.value; });
   for (const pl of ["gym", "home"]) (S.plans[pl]?.days || []).forEach((_, i) => { const c = $(`#mob-as-${pl}-${i}`); if (c) b._assign[pl][i] = c.checked; });
 }
 function viewMobility() {
   const m = S.mobility || {blocks: [], assign: {}}, blocks = m.blocks || [];
   const usedIn = b => ["gym", "home"].map(pl => { const ds = (S.plans[pl]?.days || []).map((d, i) => mobBlockFor(pl, i)?.id === b.id ? d.name.split(":")[0].replace("Día ", "D") : null).filter(Boolean); return ds.length ? `${pl === "gym" ? "Gimnasio" : "Casa"}: ${ds.join(", ")}` : ""; }).filter(Boolean).join(" · ") || "Sin días asignados";
   const view = b => `<div class="panel mobblk"><div class="row between"><div><h3 style="margin:0">${esc(b.name)}</h3><div class="small muted">${esc(usedIn(b))}</div></div><button class="editbtn" data-mobedit="${esc(b.id)}">Editar</button></div>
-    ${MOB_KINDS.map(([k, t]) => `<div class="eyebrow" style="margin-top:10px">${t}</div><ul class="mobul">${(b[k] || []).map(x => `<li><span>${esc(x.n)}</span>${x.d ? `<span class="muted num">${esc(x.d)}</span>` : ""}</li>`).join("") || `<li class="muted">Nada todavía</li>`}</ul>`).join("")}</div>`;
+    ${MOB_KINDS.map(([k, t]) => `<div class="eyebrow" style="margin-top:10px">${t}</div><ul class="mobul">${(b[k] || []).map(x => `<li><span>${esc(x.n)}${x.p ? ` <span class="pill keep">${MOB_P[x.p]}</span>` : ""}</span>${x.d ? `<span class="muted num">${esc(x.d)}</span>` : ""}</li>`).join("") || `<li class="muted">Nada todavía</li>`}</ul>`).join("")}</div>`;
   const edit = b => `<div class="panel mobblk stack">
     <div class="field"><label for="mob-name">Nombre del bloque</label><input class="input" id="mob-name" value="${esc(b.name)}" placeholder="Torso, Pierna…"></div>
     ${MOB_KINDS.map(([k, t]) => `<div><div class="eyebrow" style="margin-bottom:6px">${t}</div>
-      ${(b[k] || []).map((x, i) => `<div class="mobrow"><input class="input" id="mob-${k}-${i}-n" value="${esc(x.n)}" placeholder="Ejercicio" aria-label="${t}: ejercicio ${i + 1}"><input class="input" id="mob-${k}-${i}-d" value="${esc(x.d || "")}" placeholder="${k === "warm" ? "12 reps" : "30 s por lado"}" aria-label="${t}: cantidad ${i + 1}"><button class="btn ghost" data-mobdel="${k}:${i}" aria-label="Quitar">✕</button></div>`).join("")}
+      ${(b[k] || []).map((x, i) => `<div class="mobrow"><input class="input" id="mob-${k}-${i}-n" value="${esc(x.n)}" placeholder="Ejercicio" aria-label="${t}: ejercicio ${i + 1}"><input class="input" id="mob-${k}-${i}-d" value="${esc(x.d || "")}" placeholder="${k === "warm" ? "12 reps" : "30 s por lado"}" aria-label="${t}: cantidad ${i + 1}"><select class="input" id="mob-${k}-${i}-p" aria-label="${t}: dónde ${i + 1}"><option value="">Siempre</option><option value="gym" ${x.p === "gym" ? "selected" : ""}>Gimnasio</option><option value="home" ${x.p === "home" ? "selected" : ""}>Casa</option></select><button class="btn ghost" data-mobdel="${k}:${i}" aria-label="Quitar">✕</button></div>`).join("")}
       <button class="addset" data-mobadd="${k}">+ Añadir ${k === "warm" ? "ejercicio de calentamiento" : "estiramiento"}</button></div>`).join("")}
     <div><div class="eyebrow" style="margin-bottom:6px">Se hace en</div>${["gym", "home"].map(pl => (S.plans[pl]?.days || []).length ? `<div class="small" style="margin-top:6px"><b>${pl === "gym" ? "Gimnasio" : "Casa"}</b></div><div class="mobdays">${S.plans[pl].days.map((d, i) => { const other = mobBlockFor(pl, i); return `<label class="chip"><input type="checkbox" id="mob-as-${pl}-${i}" ${b._assign[pl][i] ? "checked" : ""}> ${esc(d.name.replace(/^Día (\d+):\s*/, "D$1 · "))}${other && other.id !== b.id ? ` <span class="muted">(${esc(other.name)})</span>` : ""}</label>`; }).join("")}</div>` : "").join("")}
       <p class="small muted" style="margin-top:6px">Cada día usa un solo bloque: si marcas un día que tenía otro, pasa a este.</p></div>
@@ -810,7 +812,7 @@ function mobStartEdit(b) {
 }
 async function mobSave() {
   syncMobDraft(); const b = S.mobDraft;
-  const clean = l => (l || []).map(x => ({n: (x.n || "").trim(), d: (x.d || "").trim()})).filter(x => x.n);
+  const clean = l => (l || []).map(x => ({n: (x.n || "").trim(), d: (x.d || "").trim(), ...(x.p ? {p: x.p} : {})})).filter(x => x.n);
   if (!b.name.trim()) { toast("Ponle nombre al bloque."); return; }
   const m = JSON.parse(JSON.stringify(S.mobility || {blocks: [], assign: {}})); m.blocks = m.blocks || []; m.assign = m.assign || {};
   const id = b.id || "b" + Date.now().toString(36), blk = {id, name: b.name.trim(), warm: clean(b.warm), stretch: clean(b.stretch)};
@@ -2154,7 +2156,7 @@ async function saveSession() {
   const btn = document.querySelector('[data-act="saveSession"]'); btn && (btn.disabled = true);
   try {
     const mb = mobBlockFor(d.place, S.plans[d.place]?.days?.findIndex(x => x.name === d.day)), mob = {};
-    if (mb) for (const [k] of MOB_KINDS) if ((mb[k] || []).length) mob[k] = mb[k].map(x => ({n: x.n, done: !!d.mob?.[k]?.[x.n]}));
+    if (mb) for (const [k] of MOB_KINDS) { const it = mobItems(mb, k, d.place); if (it.length) mob[k] = it.map(x => ({n: x.n, done: !!d.mob?.[k]?.[x.n]})); }
     await S.db.collection("logs").add({date: d.date || todayISO(), place: d.place, day: d.day, entries, energy: d.energy, note: d.note || "", ...mob, createdAt: Date.now()});
     // actualizar "último peso" y sugerencia de progresión en el plan
     const plan = JSON.parse(JSON.stringify(S.plans[d.place])); const day = plan.days.find(x => x.name === d.day);
@@ -2181,8 +2183,9 @@ document.addEventListener("click", async ev => {
   if (ds.mobchk) {
     const [k, i] = ds.mobchk.split(":"), b = mobBlockFor(S.place, S.dayIdx); if (!b) return;
     S.draft.mob = S.draft.mob || {}; const m = S.draft.mob[k] = S.draft.mob[k] || {};
-    if (i === "all") b[k].forEach(x => m[x.n] = true); else { const x = b[k][+i]; m[x.n] = !m[x.n]; }
-    if (b[k].every(x => m[x.n])) { S.mobOpen = S.mobOpen || {}; S.mobOpen[k] = false; }
+    const items = mobItems(b, k, S.place);
+    if (i === "all") items.forEach(x => m[x.n] = true); else { const x = items[+i]; m[x.n] = !m[x.n]; }
+    if (items.every(x => m[x.n])) { S.mobOpen = S.mobOpen || {}; S.mobOpen[k] = false; }
     saveDraftLocal(); render(); return;
   }
   if (ds.mobedit) { const b = (S.mobility?.blocks || []).find(x => x.id === ds.mobedit); if (b) { mobStartEdit(b); render(); } return; }
