@@ -1923,8 +1923,8 @@ function hrForm(l) {
       : `<p class="small muted">No hay capturas nuevas en la carpeta (las ya analizadas están en «Usadas»). Desde el móvil: haz la captura en MyZone → Compartir → Drive → carpeta «${esc(S.profile?.drive?.pulse?.name || "Pulso (MyZone)")}».</p>`) : ""}
     ${f.length ? `<div class="hrphotos">${(S.hrUrls || []).map(u => `<span class="hrph"><img src="${u}" alt="Foto nueva"></span>`).join("")}</div>${S.hrFromDrive?.length ? `<p class="small muted">Desde Drive.</p>` : ""}` : ""}
     <div class="field"><label for="hr-note">¿Qué parte de la gráfica es pesas y cuál cardio?</label><textarea class="input" id="hr-note" rows="3" placeholder="Ej.: del minuto 0 al 55 pesas; del 55 al 80 cinta inclinada al 8 %. Los picos del principio son las series de press.">${esc(S.hrNote ?? h.note ?? "")}</textarea></div>
-    <details ${h.avg || h.max ? "open" : ""}><summary class="small" style="cursor:pointer">Números a mano (opcional)</summary>
-      <div class="grid2" style="margin-top:8px">${[["avg", "Pulso medio"], ["max", "Pulso máximo"], ["dur", "Duración (min)"], ["kcal", "Calorías"], ["meps", "MEPs (MyZone)"], ["effort", "Esfuerzo medio %"]].map(([k, t]) => `<div class="field"><label for="hr-${k}">${t}</label><input class="input" id="hr-${k}" inputmode="numeric" value="${esc(h[k] ?? "")}"></div>`).join("")}</div></details>
+    <details ${h.manual && Object.keys(h.manual).length ? "open" : ""}><summary class="small" style="cursor:pointer">Números a mano (opcional): pon el pulso medio y máximo que te da MyZone</summary>
+      <div class="grid2" style="margin-top:8px">${[["avg", "Pulso medio"], ["max", "Pulso máximo"], ["dur", "Duración (min)"], ["kcal", "Calorías"], ["meps", "MEPs (MyZone)"], ["effort", "Esfuerzo medio %"]].map(([k, t]) => `<div class="field"><label for="hr-${k}">${t}</label><input class="input" id="hr-${k}" inputmode="numeric" value="${esc((h.manual || {})[k] ?? "")}"></div>`).join("")}</div></details>
     <p class="small muted">${aiTxt}. Tu pulso máximo es ${hrMax()} ppm ${S.profile?.hrMax ? `(calibrado con MyZone${S.profile.hrMaxFrom?.date ? " el " + fmtDate(S.profile.hrMaxFrom.date) : ""})` : "(estimado por tu edad)"}. Si escribes en «Números a mano» el pulso medio que te da MyZone, la app lo vuelve a calibrar.</p>
     <div class="row"><button class="btn primary" data-hrsave="${l.id}" ${S.hrBusy ? "disabled" : ""}>${S.hrBusy ? esc(S.hrBusy) : "Analizar y guardar"}</button><button class="btn ghost" data-act="hrCancel" ${S.hrBusy ? "disabled" : ""}>Cancelar</button>
       ${l.hr ? `<button class="btn ghost danger" data-hrdel="${l.id}" ${S.hrBusy ? "disabled" : ""}>Quitar pulso</button>` : ""}</div></div>`;
@@ -1945,8 +1945,11 @@ async function hrSave(id) {
   S.hrNote = note; S.hrBusy = "Guardando fotos…"; render();
   try {
     let photos = (l.hr?.photos || []).slice();
-    const blobs = await Promise.all(files.map(f => hrCompress(f)));
-    if (blobs.length) {
+    let blobs = await Promise.all(files.map(f => hrCompress(f)));
+    const fresh = blobs.length > 0;
+    // Sin fotos nuevas: se vuelven a analizar las ya guardadas
+    if (!fresh && photos.length) { try { blobs = (await Promise.all(photos.map(async x => { const r = await fetch(hrPhotoSrc(x)); return r.ok ? r.blob() : null; }))).filter(Boolean); } catch { blobs = []; } }
+    if (fresh) {
       photos = [];
       for (const b of blobs) {
         if (S.assets) { const r = await S.assets.upload(b, {type: "image/jpeg"}); photos.push(r.id); }
@@ -1961,8 +1964,8 @@ async function hrSave(id) {
       if (HOSTED) { try { S.hrBusy = "Leyendo los números…"; render(); const w = await ocrWorker(); ocrTxt = ""; for (const b of imgs) { const {data} = await w.recognize(await ocrImage(b)); ocrTxt += (data.text || "") + "\n---\n"; } sum = mzSummary(ocrTxt); } catch { ocrTxt = null; } }
     }
     const durMin = manual.dur ?? sum.dur ?? (l.hr?.dur || null);
-    const series = chart ? mzSeries(chart, durMin) : (blobs.length ? null : l.hr?.series || null);
-    const chartTxt = series ? `\nCURVA LEÍDA DE LA GRÁFICA DE MYZONE (la app ha medido las barras: esfuerzo en % del pulso máximo de MyZone y zona por color, ${series.step ? "un valor por minuto" : "100 tramos del entreno"}). Tiempo en zonas medido: ${[1, 2, 3, 4, 5].map(z => "Z" + z + " " + chart.zones["z" + z] + "%").join(", ")}${chart.below ? `, por debajo de 50 %: ${chart.below}%` : ""}. Esfuerzo medio medido ${chart.mean}%, máximo ${chart.max}%.\n${mzSeriesText(series)}\nCon esta curva y la nota del usuario separa los tramos de pesas y de cardio, mira los picos de las series y cuánto baja el pulso en los descansos.` : "";
+    const series = chart ? mzSeries(chart, durMin) : (fresh ? null : l.hr?.series || null);
+    const chartTxt = series ? `\nCURVA LEÍDA DE LA GRÁFICA DE MYZONE (la app ha medido las barras: esfuerzo en % del pulso máximo de MyZone y zona por color, ${series.step ? "un valor por minuto" : "100 tramos del entreno"}). Tiempo en zonas medido: ${[1, 2, 3, 4, 5].map(z => "Z" + z + " " + chart.zones["z" + z] + "%").join(", ")}${chart.below ? `, por debajo de 50 %: ${chart.below}%` : ""}. Esfuerzo medio medido ${chart.mean}%, máximo de la curva ${chart.max}% (las barras promedian: el pico real suele ser algo mayor; si el usuario da el máximo a mano, usa el suyo).\n${mzSeriesText(series)}\nCon esta curva y la nota del usuario separa los tramos de pesas y de cardio, mira los picos de las series y cuánto baja el pulso en los descansos.` : "";
     if (imgs.length && coachReady()) {
       S.hrBusy = "Analizando…"; render();
       try {
@@ -1978,8 +1981,8 @@ async function hrSave(id) {
     if (!ai && chart) source = "Gráfica leída por la app";
     const intN = v => v == null || v === "" || isNaN(+v) ? null : Math.round(+v);
     const segN = o => o && typeof o === "object" ? {avg: intN(o.avg), max: intN(o.max), min: intN(o.min)} : null;
-    const driveIds = blobs.length ? (S.hrFromDrive || []) : (l.hr?.driveIds || []);
-    const hr = {photos, note, source, at: new Date().toISOString(), driveIds,
+    const driveIds = fresh ? (S.hrFromDrive || []) : (l.hr?.driveIds || []);
+    const hr = {photos, note, source, at: new Date().toISOString(), driveIds, manual,
       meps: manual.meps ?? sum.meps ?? intN(ai?.meps), effort: manual.effort ?? sum.effort ?? intN(ai?.effort) ?? chart?.mean ?? null, series: series || null, effortMax: chart?.max ?? l.hr?.effortMax ?? null,
       avg: manual.avg ?? intN(ai?.avg), max: manual.max ?? intN(ai?.max), min: intN(ai?.min), dur: durMin ?? intN(ai?.dur), kcal: manual.kcal ?? sum.kcal ?? intN(ai?.kcal),
       zones: chart ? chart.zones : ai?.zones && typeof ai.zones === "object" ? Object.fromEntries([1, 2, 3, 4, 5].map(z => [`z${z}`, intN(ai.zones["z" + z]) ?? 0])) : null,
@@ -1991,7 +1994,7 @@ async function hrSave(id) {
     hr.intensity = HR_LBL[ai?.intensity] ? ai.intensity : hr.effort ? (hr.effort < 60 ? "baja" : hr.effort < 70 ? "moderada" : hr.effort < 80 ? "alta" : "muy alta") : hrIntensity(hr.avg);
     if (!hr.avg && !hr.max && !photos.length && !note) { toast("Añade una foto, una nota o los números."); S.hrBusy = ""; render(); return; }
     const {id: _i, ...rest} = l; await S.db.doc("logs/" + id).set({...rest, hr});
-    const moved = blobs.length && S.hrFromDrive?.length ? S.hrFromDrive.slice() : null;
+    const moved = fresh && S.hrFromDrive?.length ? S.hrFromDrive.slice() : null;
     hrReset(); toast(moved ? "Pulso guardado · captura movida a «Usadas»" : "Pulso guardado");
     if (moved) hrArchiveDrive(l, moved);
   } catch (e) { toast(e?.code === "quota_exceeded" ? "No queda espacio para más fotos." : "No se pudo guardar el pulso."); S.hrBusy = ""; }
