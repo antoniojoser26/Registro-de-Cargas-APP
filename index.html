@@ -1806,9 +1806,24 @@ async function hrDriveUse() {
       files.push(new File([bytes], t, {type}));
     }
     (S.hrUrls || []).forEach(u => URL.revokeObjectURL(u));
-    S.hrFiles = files; S.hrUrls = files.map(f => URL.createObjectURL(f)); S.hrFromDrive = ids; S.hrDrive = null;
+    S.hrFiles = files; S.hrUrls = files.map(f => URL.createObjectURL(f)); S.hrFromDrive = ids; S.hrDriveAll = S.hrDrive; S.hrDrive = null;
   } catch (e) { toast(driveErr(e)); }
   S.hrBusy = ""; render();
+}
+/* Tras analizarlas, las capturas de Drive se renombran con la fecha y la sesión y pasan a «Pulso (MyZone)/Usadas»:
+   en la carpeta principal solo quedan las nuevas, aunque MyZone las llame siempre igual. */
+async function hrArchiveDrive(l, ids) {
+  const f = S.profile?.drive?.pulse; if (!S.mcp || !f?.id || !ids?.length) return;
+  const call = (t, i) => S.mcp.callTool("Google Drive", t, i, {cache: false}).then(r => r.payload || {});
+  try {
+    let used = S.profile.drive.pulseUsed;
+    if (!used?.id) { const r = await call("create_file", {title: "Usadas", contentMimeType: "application/vnd.google-apps.folder", parentId: f.id}); if (!r.id) return; used = {id: String(r.id), url: String(r.viewUrl || "")}; await saveProfile({...S.profile, drive: {...S.profile.drive, pulseUsed: used}}); }
+    const day = (l.day || "").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+    for (let i = 0; i < ids.length; i++) {
+      const meta = (S.hrDriveAll || []).find(x => x.id === ids[i]) || {}, ext = (/\.(png|jpe?g|webp)$/i.exec(meta.title || "") || [".png"])[0];
+      try { await call("update_file", {fileId: ids[i], title: `${l.date} ${day} - MyZone${ids.length > 1 ? " " + (i + 1) : ""}${ext}`, parentId: used.id}); } catch {}
+    }
+  } catch {}
 }
 function hrBlock(l) {
   const h = l.hr;
@@ -1833,7 +1848,7 @@ function hrForm(l) {
     ${S.mcp && S.profile?.drive?.pulse?.id ? `<div class="row" style="gap:8px;align-items:center"><button class="btn" data-hrdrive="${l.id}" ${S.hrBusy || S.hrDrive === "loading" ? "disabled" : ""}>${S.hrDrive === "loading" ? "Buscando…" : "Elegir de Drive"}</button><span class="small muted">Carpeta «${esc(S.profile.drive.pulse.name || "Pulso (MyZone)")}»${S.profile.drive.pulse.url ? ` · <a href="${esc(S.profile.drive.pulse.url)}" target="_blank" rel="noopener">abrir ↗</a>` : ""}</span></div>` : ""}
     ${Array.isArray(S.hrDrive) ? (S.hrDrive.length ? `<div class="hrdrive">${S.hrDrive.map(x => `<label class="hrdi"><input type="checkbox" data-hrpick="${esc(x.id)}" ${S.hrPick?.has(x.id) ? "checked" : ""}><span><b>${esc(x.title)}</b><span class="small muted">${x.date ? new Date(x.date).toLocaleString("es-ES", {weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : ""}${x.used ? ` · ya usada en ${esc(x.used.day.split(":")[0])} del ${fmtDate(x.used.date)}` : ""}</span></span></label>`).join("")}
         <div class="row"><button class="btn primary" data-act="hrDriveUse">Usar seleccionadas</button><button class="btn ghost" data-act="hrDriveClose">Cerrar</button></div></div>`
-      : `<p class="small muted">La carpeta no tiene capturas todavía. Desde el móvil: haz la captura en MyZone → Compartir → Drive → carpeta «${esc(S.profile?.drive?.pulse?.name || "Pulso (MyZone)")}».</p>`) : ""}
+      : `<p class="small muted">No hay capturas nuevas en la carpeta (las ya analizadas están en «Usadas»). Desde el móvil: haz la captura en MyZone → Compartir → Drive → carpeta «${esc(S.profile?.drive?.pulse?.name || "Pulso (MyZone)")}».</p>`) : ""}
     ${f.length ? `<div class="hrphotos">${(S.hrUrls || []).map(u => `<span class="hrph"><img src="${u}" alt="Foto nueva"></span>`).join("")}</div>${S.hrFromDrive?.length ? `<p class="small muted">Desde Drive.</p>` : ""}` : ""}
     <div class="field"><label for="hr-note">¿Qué parte de la gráfica es pesas y cuál cardio?</label><textarea class="input" id="hr-note" rows="3" placeholder="Ej.: del minuto 0 al 55 pesas; del 55 al 80 cinta inclinada al 8 %. Los picos del principio son las series de press.">${esc(S.hrNote ?? h.note ?? "")}</textarea></div>
     <details ${h.avg || h.max ? "open" : ""}><summary class="small" style="cursor:pointer">Números a mano (opcional)</summary>
@@ -1895,7 +1910,9 @@ async function hrSave(id) {
     hr.intensity = HR_LBL[ai?.intensity] ? ai.intensity : hrIntensity(hr.avg);
     if (!hr.avg && !hr.max && !photos.length && !note) { toast("Añade una foto, una nota o los números."); S.hrBusy = ""; render(); return; }
     const {id: _i, ...rest} = l; await S.db.doc("logs/" + id).set({...rest, hr});
-    hrReset(); toast("Pulso guardado");
+    const moved = blobs.length && S.hrFromDrive?.length ? S.hrFromDrive.slice() : null;
+    hrReset(); toast(moved ? "Pulso guardado · captura movida a «Usadas»" : "Pulso guardado");
+    if (moved) hrArchiveDrive(l, moved);
   } catch (e) { toast(e?.code === "quota_exceeded" ? "No queda espacio para más fotos." : "No se pudo guardar el pulso."); S.hrBusy = ""; }
   render();
 }
