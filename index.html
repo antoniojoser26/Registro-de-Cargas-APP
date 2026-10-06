@@ -546,7 +546,7 @@ const S = {
   mcp: null, assets: null, videos: {}, vPlace: "gym", vAdd: null, vMode: "drive", driveFiles: null, driveState: "idle", driveErr: "", uploading: false,
   daily: [], nutMetric: "kcal", importing: "",
   editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, gcalWrite: lsGet("rc.gcalWrite") !== false, gcalMap: {}, showIdeas: false, attach: [], attachUrls: [], attachOcr: [], imgCaps: null, exporting: "", exportBusy: false,
-  mobility: null, mobEdit: null, mobDraft: null, mobOpen: null, evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
+  backup: null, abMsg: "", mobility: null, mobEdit: null, mobDraft: null, mobOpen: null, evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
   apiKey: lsGet("rc.apikey") || "", apiModel: lsGet("rc.model") || ""
 };
 
@@ -2058,7 +2058,7 @@ function csv(rows) {
   const cell = v => { if (v == null) return ""; const s = String(v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   return rows.map(r => r.map(cell).join(",")).join("\n") + "\n";
 }
-function buildExport() {
+function buildTables() {
   const place = p => p === "home" ? "casa" : "gimnasio";
   const logs = [...S.logs].sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.createdAt || 0) - (b.createdAt || 0));
   const series = [["fecha", "lugar", "dia", "ejercicio", "serie", "kg", "reps", "reps_objetivo", "sensacion", "nota_ejercicio", "energia_sesion", "nota_sesion", "id_sesion"]];
@@ -2071,16 +2071,31 @@ function buildExport() {
   const daily = [["fecha", "pasos", "kcal", "proteina_g", "grasa_g", "hidratos_g", "fuente"], ...[...S.daily].sort((a, b) => a.date.localeCompare(b.date)).map(d => [d.date, d.steps, d.kcal, d.protein, d.fat, d.carbs, d.source])];
   const plans = [["rutina", "dia", "orden", "ejercicio", "objetivo", "ultimo_peso", "notas", "tecnica", "progresion"]];
   for (const [k, p] of Object.entries(S.plans)) (p.days || []).forEach(d => d.ex.forEach((x, i) => plans.push([place(k), d.name, i + 1, x.n, x.t, x.last, x.note, x.tip, x.prog])));
-  return [
-    {name: "series.csv", mime: "text/csv", text: csv(series)},
-    {name: "cardio.csv", mime: "text/csv", text: csv(cardio)},
-    {name: "composicion_corporal.csv", mime: "text/csv", text: csv(body)},
-    {name: "nutricion_y_pasos.csv", mime: "text/csv", text: csv(daily)},
-    {name: "rutinas.csv", mime: "text/csv", text: csv(plans)},
-    {name: "evolt.csv", mime: "text/csv", text: csv([["fecha", "hora", "peso_kg", "masa_magra_kg", "musculo_esqueletico_kg", "proteina_kg", "minerales_kg", "agua_kg", "masa_grasa_kg", "grasa_pct", "grasa_subcutanea_kg", "grasa_visceral_kg", "nivel_visceral", "area_visceral_cm2", "bmr_kcal", "tee_kcal", "edad_biologica", "bwi", "abdomen_cm", "cintura_cadera", ...EV_ZONES.flatMap(([z]) => [z + "_musculo_kg", z + "_grasa_kg"])],
-      ...evScans().reverse().map(e => [e.date, e.time, e.weight, e.lbm?.v, e.smm?.v, e.protein?.v, e.minerals?.v, e.tbw?.v, e.bfm?.v, e.bfp?.v, e.subq?.v, e.visMass?.v, e.vfl?.v, e.vfa?.v, e.bmr, e.tee, e.bioAge, e.bwi, e.waist?.v, e.whr?.v, ...EV_ZONES.flatMap(([z]) => [e.seg?.[z]?.lean?.v, e.seg?.[z]?.fat?.v])])])},
-    {name: "copia_completa.json", mime: "application/json", text: JSON.stringify(backupData(), null, 2)}
-  ];
+  const mob = [["fecha", "lugar", "dia", "tipo", "ejercicio", "hecho", "id_sesion"]];
+  for (const l of logs) for (const [k, t] of [["warm", "calentamiento"], ["stretch", "estiramiento"]]) (l[k] || []).forEach(x => mob.push([l.date, place(l.place), l.day, t, x.n, x.done ? "sí" : "no", l.id]));
+  const evolt = [["fecha", "hora", "peso_kg", "masa_magra_kg", "musculo_esqueletico_kg", "proteina_kg", "minerales_kg", "agua_kg", "masa_grasa_kg", "grasa_pct", "grasa_subcutanea_kg", "grasa_visceral_kg", "nivel_visceral", "area_visceral_cm2", "bmr_kcal", "tee_kcal", "edad_biologica", "bwi", "abdomen_cm", "cintura_cadera", ...EV_ZONES.flatMap(([z]) => [z + "_musculo_kg", z + "_grasa_kg"])],
+      ...evScans().reverse().map(e => [e.date, e.time, e.weight, e.lbm?.v, e.smm?.v, e.protein?.v, e.minerals?.v, e.tbw?.v, e.bfm?.v, e.bfp?.v, e.subq?.v, e.visMass?.v, e.vfl?.v, e.vfa?.v, e.bmr, e.tee, e.bioAge, e.bwi, e.waist?.v, e.whr?.v, ...EV_ZONES.flatMap(([z]) => [e.seg?.[z]?.lean?.v, e.seg?.[z]?.fat?.v])])];
+  return [["Series", "series.csv", series], ["Cardio", "cardio.csv", cardio], ["Calentamiento", "calentamiento_estiramientos.csv", mob], ["Composición", "composicion_corporal.csv", body], ["Nutrición", "nutricion_y_pasos.csv", daily], ["EVOLT", "evolt.csv", evolt], ["Rutinas", "rutinas.csv", plans]];
+}
+function buildExport() {
+  return [...buildTables().map(([, name, rows]) => ({name, mime: "text/csv", text: csv(rows)})),
+    {name: "copia_completa.json", mime: "application/json", text: JSON.stringify(backupData(), null, 2)}];
+}
+const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+function loadXlsx() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; sc.onload = () => ok(window.XLSX); sc.onerror = () => ko(new Error("xlsx")); document.head.append(sc); });
+}
+/* Un libro de Excel con una hoja por tabla: cabecera fija, columnas a medida y números como números. */
+async function buildXlsx(type) {
+  const X = await loadXlsx(), wb = X.utils.book_new();
+  for (const [sheet, , rows] of buildTables()) {
+    const ws = X.utils.aoa_to_sheet(rows.map(r => r.map(v => v == null ? "" : v)));
+    ws["!cols"] = rows[0].map((_, c) => ({wch: Math.min(40, Math.max(8, ...rows.slice(0, 300).map(r => String(r[c] ?? "").length + 1)))}));
+    ws["!freeze"] = {xSplit: 0, ySplit: 1}; ws["!autofilter"] = {ref: ws["!ref"]};
+    X.utils.book_append_sheet(wb, ws, sheet);
+  }
+  return X.write(wb, {type, bookType: "xlsx", compression: true});
 }
 const stamp = () => { const d = new Date(); return todayISO() + " " + String(d.getHours()).padStart(2, "0") + "." + String(d.getMinutes()).padStart(2, "0"); };
 async function exportToDrive() {
@@ -2091,9 +2106,10 @@ async function exportToDrive() {
     const folder = (await call({title: stamp(), contentMimeType: "application/vnd.google-apps.folder", parentId: exp.id})).payload;
     if (!folder?.id) throw {code: "tool_error", message: "sin id de carpeta"};
     const files = buildExport();
+    try { files.unshift({name: "Registro de Cargas.xlsx", mime: XLSX_MIME, b64: await buildXlsx("base64")}); } catch {}
     for (let i = 0; i < files.length; i++) {
       S.exporting = `Subiendo ${files[i].name} (${i + 1}/${files.length})…`; const el = $("#expState"); if (el) el.textContent = S.exporting;
-      await call({title: files[i].name, parentId: folder.id, textContent: files[i].text, contentMimeType: files[i].mime, disableConversionToGoogleType: true});
+      await call({title: files[i].name, parentId: folder.id, ...(files[i].b64 ? {base64Content: files[i].b64} : {textContent: files[i].text}), contentMimeType: files[i].mime, disableConversionToGoogleType: true});
     }
     await saveProfile({...S.profile, lastExport: {at: new Date().toISOString(), url: folder.viewUrl || ""}});
     S.exporting = ""; toast("Registros exportados a Drive");
@@ -2105,23 +2121,84 @@ async function exportToDrive() {
 async function exportZip() {
   if (!window.JSZip) { toast("No se pudo preparar el ZIP."); return; }
   const zip = new JSZip(); buildExport().forEach(f => zip.file(f.name, f.text));
+  try { zip.file("Registro de Cargas.xlsx", await buildXlsx("array")); } catch {}
   const blob = await zip.generateAsync({type: "blob"});
   const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `registro-de-cargas ${stamp()}.zip`; document.body.append(link); link.click(); link.remove();
 }
 function exportSection() {
   const pr = S.profile || {}, dr = pr.drive, le = pr.lastExport;
-  const files = "series, cardio, composición corporal, nutrición y pasos, rutinas, escaneos EVOLT y una copia completa en JSON";
+  const files = "un Excel con todo, y además CSV de series, cardio, calentamiento, composición corporal, nutrición y pasos, rutinas, escaneos EVOLT y una copia completa en JSON";
   if (HOSTED) return `<section><h2>Exportar registros</h2><div class="panel stack" style="margin-top:10px">
-    <p class="small">Guarda todo tu historial en tu Google Drive como archivos CSV (${files}). Cada exportación crea una carpeta con la fecha dentro de <b>Exportaciones</b>, así conservas el histórico completo para usarlo en otras apps u hojas de cálculo.</p>
+    <p class="small">Guarda una copia de todo tu historial en tu Google Drive: ${files}. Cada exportación crea una carpeta con la fecha dentro de <b>Exportaciones</b>, así conservas el histórico completo para usarlo en otras apps u hojas de cálculo.</p>
     ${le ? `<p class="small muted">Última exportación: ${new Date(le.at).toLocaleString("es-ES", {day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"})}${le.url ? ` · <a href="${esc(le.url)}" target="_blank" rel="noopener">abrir ↗</a>` : ""}</p>` : ""}
     <div class="row">${S.mcp && dr?.exports?.id ? `<button class="btn primary" data-act="exportDrive" ${S.exportBusy ? "disabled" : ""}>Exportar a Drive</button>` : `<span class="small muted">${dr ? "La exportación a Drive solo funciona al abrir la app dentro de Claude." : "Aún no hay carpeta de Drive configurada."}</span>`}
       ${dr?.root?.url ? `<a class="btn ghost" style="text-decoration:none;display:inline-flex;align-items:center" href="${esc(dr.root.url)}" target="_blank" rel="noopener">Carpeta de la app ↗</a>` : ""}</div>
-    <p class="small muted" id="expState">${esc(S.exporting || "")}</p></div></section>`;
+    <p class="small muted" id="expState">${esc(S.exporting || "")}</p></div>${autoBackupPanel()}</section>`;
   return `<section><h2>Exportar registros</h2><div class="panel stack" style="margin-top:10px">
-    <p class="small">Descarga un ZIP con tus registros en CSV (${files}). Sirve para hojas de cálculo o para llevar tu histórico a otra app.</p>
+    <p class="small">Descarga un ZIP con tus registros: ${files}. Sirve para hojas de cálculo o para llevar tu histórico a otra app.</p>
     <div class="row"><button class="btn primary" data-act="exportZip">Descargar ZIP</button></div></div></section>`;
 }
 
+
+/* ---------- copia automática en Google Drive ----------
+   Tras cada cambio (sesión, medición, EVOLT, comida, rutinas…) se sube «Registro de Cargas.xlsx» y
+   «copia_completa.json» a Exportaciones/Copia automática y se manda a la papelera la versión anterior.
+   La primera copia de cada semana se conserva con su fecha como histórico. Estado en backup/auto. */
+const weekStart = iso => isoAdd(iso, -((wdOf(iso) + 6) % 7));
+function dataHash() {
+  const d = backupData().docs; delete d["chat/main"]; const str = JSON.stringify(Object.keys(d).sort().map(k => [k, d[k]]));
+  let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + "-" + str.length;
+}
+let abTimer = null, abBusy = false, abAgain = false, abGranted = null, abReady = false;
+async function driveGranted() {
+  if (abGranted === true) return true;
+  try { const perms = await claude.use("permissions"); abGranted = perms ? (await perms.state("mcp:Google Drive")) === "granted" : false; } catch { abGranted = false; }
+  return abGranted;
+}
+const backupOn = () => HOSTED && !!S.mcp && !!S.profile?.drive?.exports?.id && S.backup?.enabled !== false;
+function dataTick() { if (abReady) scheduleBackup(6000); }
+function scheduleBackup(ms) { if (!backupOn()) return; clearTimeout(abTimer); abTimer = setTimeout(async () => { if (await driveGranted()) runBackup(false); }, ms); }
+async function runBackup(force) {
+  if (!backupOn() && !force) return;
+  if (abBusy) { abAgain = true; return; }
+  const hash = dataHash(); if (!force && hash === S.backup?.hash) return;
+  abBusy = true; S.abMsg = "Guardando copia en Drive…"; if (S.tab === "me") render();
+  const call = (tool, input) => S.mcp.callTool("Google Drive", tool, input, {cache: false}).then(r => r.payload || {});
+  const old = S.backup || {}, wk = weekStart(todayISO());
+  try {
+    let folderId = old.folderId, folderUrl = old.folderUrl || "";
+    if (!folderId) { const f = await call("create_file", {title: "Copia automática", contentMimeType: "application/vnd.google-apps.folder", parentId: S.profile.drive.exports.id}); if (!f.id) throw {code: "tool_error", message: "sin carpeta"}; folderId = String(f.id); folderUrl = String(f.viewUrl || ""); }
+    const x = await call("create_file", {title: "Registro de Cargas.xlsx", parentId: folderId, base64Content: await buildXlsx("base64"), contentMimeType: XLSX_MIME, disableConversionToGoogleType: true});
+    const j = await call("create_file", {title: "copia_completa.json", parentId: folderId, textContent: JSON.stringify(backupData()), contentMimeType: "application/json", disableConversionToGoogleType: true});
+    if (!x.id) throw {code: "tool_error", message: "no se creó el Excel"};
+    // la versión anterior: se guarda como histórico si es de otra semana; si no, a la papelera
+    const keep = old.week && old.week !== wk, tag = old.week ? ` (semana del ${fmtDate(old.week, {day: "numeric", month: "short", year: "numeric"})})` : "";
+    for (const [id, base, ext] of [[old.xlsxId, "Registro de Cargas", ".xlsx"], [old.jsonId, "copia_completa", ".json"]]) {
+      if (!id) continue;
+      try { keep ? await call("update_file", {fileId: id, title: base + tag + ext}) : await call("trash_file", {fileId: id}); } catch {}
+    }
+    await S.db.doc("backup/auto").set({enabled: true, folderId, folderUrl, xlsxId: String(x.id), jsonId: j.id ? String(j.id) : null, url: String(x.viewUrl || ""), at: new Date().toISOString(), hash, week: wk, err: null});
+    S.abMsg = "";
+  } catch (e) {
+    S.abMsg = e?.code === "not_granted" || e?.code === "not_in_manifest" ? "Falta el permiso de Google Drive: pulsa «Hacer copia ahora» y acéptalo." : driveErr(e);
+    try { await S.db.doc("backup/auto").set({...old, err: S.abMsg, errAt: new Date().toISOString()}); } catch {}
+  }
+  abBusy = false; if (S.tab === "me") render();
+  if (abAgain) { abAgain = false; scheduleBackup(1500); }
+}
+function autoBackupPanel() {
+  if (!HOSTED) return "";
+  const b = S.backup || {}, on = b.enabled !== false, can = !!S.mcp && !!S.profile?.drive?.exports?.id;
+  const when = b.at ? new Date(b.at).toLocaleString("es-ES", {weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}) : null;
+  return `<div class="panel stack" style="margin-top:10px">
+    <div class="row between"><div><b>Copia automática en Drive</b> <span class="pill ${on && can ? "good" : "keep"}">${on && can ? "Activada" : "Desactivada"}</span></div>
+      ${can ? `<button class="chip" data-act="abToggle">${on ? "Desactivar" : "Activar"}</button>` : ""}</div>
+    <p class="small">Cada vez que guardas una sesión, una medición, un escaneo EVOLT, tu comida o cambias las rutinas, la app actualiza sola un Excel en <b>Exportaciones → Copia automática</b> con una hoja por tema (series con kg y repeticiones, cardio, calentamiento, composición, nutrición, EVOLT y rutinas) y una copia completa para restaurar. La primera copia de cada semana se guarda con su fecha como histórico.</p>
+    ${when ? `<p class="small muted">Última copia: ${when}${b.url ? ` · <a href="${esc(b.url)}" target="_blank" rel="noopener">abrir Excel ↗</a>` : ""}${b.folderUrl ? ` · <a href="${esc(b.folderUrl)}" target="_blank" rel="noopener">carpeta ↗</a>` : ""}</p>` : `<p class="small muted">Aún no se ha hecho ninguna copia automática.</p>`}
+    ${b.err && !abBusy ? `<p class="small" style="color:var(--plate-red)">${esc(b.err)}</p>` : ""}
+    ${can ? `<div class="row"><button class="btn" data-act="abNow" ${abBusy ? "disabled" : ""}>${abBusy ? "Guardando…" : "Hacer copia ahora"}</button></div>` : `<p class="small muted">Solo funciona al abrir la app dentro de Claude con Google Drive conectado.</p>`}
+    <p class="small muted" id="abState">${esc(S.abMsg || "")}</p></div>`;
+}
 /* ---------- copia de seguridad ---------- */
 function backupData() {
   const docs = {}; const strip = o => { const c = {...o}; delete c.id; return c; };
@@ -2167,7 +2244,7 @@ async function saveSession() {
       if (x.prog !== "N/A") x.prog = hit && (e.feel === "Fácil" || e.feel === "Bien") ? "Sí, subir" : "Mantener"; }
     await S.db.doc("plan/" + d.place).set(plan);
     try { localStorage.removeItem("rc.draft"); } catch {}
-    S.draft = null; S.dayIdx = null; toast("Sesión guardada"); S.tab = "prog"; lsSet("rc.tab", S.tab); render(); scrollTo(0, 0);
+    S.draft = null; S.dayIdx = null; toast("Sesión guardada"); if (backupOn()) { clearTimeout(abTimer); setTimeout(() => runBackup(false), 1500); } S.tab = "prog"; lsSet("rc.tab", S.tab); render(); scrollTo(0, 0);
   } catch (e) { btn && (btn.disabled = false); toast(e?.code === "quota_exceeded" ? "No queda espacio para más sesiones." : "No se pudo guardar. Revisa la conexión e inténtalo de nuevo."); }
 }
 async function savePlan(place, plan) { try { await S.db.doc("plan/" + place).set(plan); toast("Rutina actualizada"); } catch { toast("No se pudo guardar el cambio."); } }
@@ -2273,6 +2350,8 @@ document.addEventListener("click", async ev => {
   if (a === "stop") { S.ctl?.abort(); return; }
   if (a === "askClear") { S.confirmClear = true; render(); return; }
   if (a === "clearChat") { S.chat = []; S.confirmClear = false; render(); persistChat(); return; }
+  if (a === "abNow") { abGranted = null; return runBackup(true); }
+  if (a === "abToggle") { const on = S.backup?.enabled !== false; try { await S.db.doc("backup/auto").set({...(S.backup || {}), enabled: !on}); toast(on ? "Copia automática desactivada" : "Copia automática activada"); if (!on) runBackup(true); } catch { toast("No se pudo cambiar."); } return; }
   if (a === "mobNew") { mobStartEdit({id: null, name: "", warm: [{n: "", d: ""}], stretch: [{n: "", d: ""}]}); render(); return; }
   if (a === "mobCancel") { S.mobEdit = null; S.mobDraft = null; render(); return; }
   if (a === "mobSave") return mobSave();
@@ -2419,13 +2498,15 @@ if (!HOSTED && "serviceWorker" in navigator && location.protocol === "https:") a
   db.doc("calendar/main").onSnapshot(s => { S.cal = s.exists ? s.data() : null; S.calLoaded = true; autoPlace(); soon(); maybeAutoSync(); }, err);
   db.doc("calendar/gcal").onSnapshot(s => { S.gcalMap = s.exists ? (s.data().days || {}) : {}; soon(); }, err);
   db.doc("calendar/overrides").onSnapshot(s => { S.calOv = s.exists ? (s.data().days || {}) : {}; autoPlace(); soon(); }, err);
-  db.collection("daily").orderBy("date", "desc").limit(400).onSnapshot(s => { S.daily = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); }, err);
-  db.collection("plan").onSnapshot(s => { S.plans = {}; s.docs.forEach(d => S.plans[d.id] = d.data()); soon(); }, err);
+  db.collection("daily").orderBy("date", "desc").limit(400).onSnapshot(s => { S.daily = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); dataTick(); }, err);
+  db.collection("plan").onSnapshot(s => { S.plans = {}; s.docs.forEach(d => S.plans[d.id] = d.data()); soon(); dataTick(); }, err);
   db.doc("profile/main").onSnapshot(s => { S.profile = s.exists ? s.data() : null; S.profileLoaded = true; soon(); if (S.tab === "evolt") evAuto(); }, err);
-  db.doc("mobility/main").onSnapshot(s => { S.mobility = s.exists ? s.data() : null; soon(); }, err);
-  db.collection("evolt").onSnapshot(s => { S.evolt = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); }, err);
-  db.collection("body").onSnapshot(s => { S.body = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); }, err);
-  db.collection("logs").orderBy("createdAt", "desc").limit(400).onSnapshot(s => { S.logs = s.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt); soon(); }, err);
+  db.doc("backup/auto").onSnapshot(s => { S.backup = s.exists ? s.data() : null; if (S.tab === "me") soon(); }, err);
+  db.doc("mobility/main").onSnapshot(s => { S.mobility = s.exists ? s.data() : null; soon(); dataTick(); }, err);
+  db.collection("evolt").onSnapshot(s => { S.evolt = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); dataTick(); }, err);
+  db.collection("body").onSnapshot(s => { S.body = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); dataTick(); }, err);
+  db.collection("logs").orderBy("createdAt", "desc").limit(400).onSnapshot(s => { S.logs = s.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt); soon(); dataTick(); }, err);
+  setTimeout(() => { abReady = true; scheduleBackup(500); }, 8000);
   db.doc("chat/main").get().then(s => { if (s.exists && !S.chat.length) { S.chat = (s.data().turns || []).slice(); soon(); } }).catch(() => {});
   render();
 })();
