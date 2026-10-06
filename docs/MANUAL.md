@@ -124,6 +124,10 @@ La pestaña **Agenda** muestra el mes completo, de lunes a domingo, con tu turno
     - **Volumen**: kg × reps de todas las series.
 - Debajo aparecen las últimas 8 sesiones de ese ejercicio.
 
+### Pulso de la sesión
+
+Después de entrenar, en **Progreso** aparece «¿Añades el pulso de tu sesión?» (y en cada sesión, «Añadir pulso del reloj»). Sube la captura de la gráfica de pulso de tu reloj y escribe en la nota qué tramo fue pesas y cuál cardio (por ejemplo «del minuto 0 al 55 pesas, del 55 al 80 cinta»). La app calcula pulso medio y máximo, tiempo en zonas, intensidad de las pesas y del cardio, y una valoración. Si no hay entrenador IA, puedes poner los números a mano. El entrenador lo usa para valorar la intensidad y la recuperación, y el Excel de la copia tiene una hoja «Pulso».
+
 ### Sesiones
 
 Muestra el historial completo. Toca una sesión para ver el detalle o borrarla.

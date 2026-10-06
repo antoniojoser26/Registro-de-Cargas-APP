@@ -487,6 +487,19 @@ nav.tabs button{font-size:10px;letter-spacing:-.02em}
 .mobrow>input:first-child{grid-column:1/-1}
 .mobrow .btn{min-width:0;padding:4px}
 .mobdays{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.mobdays .chip{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+
+/* pulso */
+.hrbox{margin-top:10px;background:var(--sunk);border-radius:16px;padding:12px}
+.hrnums{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px}.hrnums span{display:flex;align-items:baseline;gap:4px}.hrnums b{font-family:var(--f-display);font-size:19px}.hrnums small{color:var(--muted);font-size:12px}
+.hrseg{margin-top:6px;padding-left:10px;border-left:4px solid var(--kc);font-size:14px}.hrseg .eyebrow{margin-right:6px}.hrseg small{color:var(--muted)}
+.hrzones{display:flex;height:22px;border-radius:8px;overflow:hidden;margin-top:10px;font-size:10.5px;font-weight:700;color:#fff}
+.hrzones span{display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;min-width:0}
+.hrzones .z1{background:#9AA5B8}.hrzones .z2{background:var(--plate-blue)}.hrzones .z3{background:var(--plate-green)}.hrzones .z4{background:var(--plate-yellow)}.hrzones .z5{background:var(--plate-red)}
+.hrphotos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.hrph{all:unset;cursor:pointer;display:block;width:84px;height:84px;border-radius:12px;overflow:hidden;background:var(--surface)}
+.hrph img{width:100%;height:100%;object-fit:cover;display:block}.hrph.big{width:100%;height:auto}.hrph.big img{height:auto;object-fit:contain}
+.hrask{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px;border-left:4px solid var(--plate-red)}
+.hrdot{color:var(--plate-red)}
 </style>
 
 </head>
@@ -546,7 +559,7 @@ const S = {
   mcp: null, assets: null, videos: {}, vPlace: "gym", vAdd: null, vMode: "drive", driveFiles: null, driveState: "idle", driveErr: "", uploading: false,
   daily: [], nutMetric: "kcal", importing: "",
   editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, gcalWrite: lsGet("rc.gcalWrite") !== false, gcalMap: {}, showIdeas: false, attach: [], attachUrls: [], attachOcr: [], imgCaps: null, exporting: "", exportBusy: false,
-  backup: null, abMsg: "", mobility: null, mobEdit: null, mobDraft: null, mobOpen: null, evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
+  backup: null, abMsg: "", hrEdit: null, hrOpen: null, hrFiles: [], hrUrls: [], hrNote: null, hrBusy: "", hrZoom: null, mobility: null, mobEdit: null, mobDraft: null, mobOpen: null, evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
   apiKey: lsGet("rc.apikey") || "", apiModel: lsGet("rc.model") || ""
 };
 
@@ -1486,12 +1499,14 @@ function viewProg() {
       <p class="small muted" style="margin-top:6px">1RM estimado con la fórmula de Epley. Volumen = kg × reps de todas las series.</p>
       <div class="hist" style="margin-top:8px">${rows.slice().reverse().slice(0, 8).map(r => `<div class="it"><div class="num">${r.e.sets.map(s => `${fmtN(s.kg)}×${s.reps ?? "–"}`).join(" · ")}<div class="small muted" style="font-family:var(--f-body)">${fmtDate(r.l.date, {day: "numeric", month: "long"})}${r.e.feel ? " · " + esc(r.e.feel) : ""}${r.e.note ? " · " + esc(r.e.note) : ""}</div></div></div>`).join("")}</div></div>`;
   }
-  const sess = S.logs.length ? S.logs.slice(0, 30).map(l => `<details class="sess"><summary><span><b>${esc(l.day)}</b> <span class="small muted">· ${l.place === "home" ? "Casa" : "Gimnasio"}</span></span><span class="small muted num">${fmtDate(l.date)}${l.energy ? " · E" + l.energy : ""}</span></summary>
+  const hrTop = hrPendingCard();
+  const sess = S.logs.length ? S.logs.slice(0, 30).map(l => `<details class="sess" ${S.hrEdit === l.id || S.hrOpen === l.id ? "open" : ""}><summary><span><b>${esc(l.day)}</b> <span class="small muted">· ${l.place === "home" ? "Casa" : "Gimnasio"}</span></span><span class="small muted num">${l.hr ? '<span class="hrdot" title="Con pulso">♥</span> ' : ""}${fmtDate(l.date)}${l.energy ? " · E" + l.energy : ""}</span></summary>
     <ul>${(l.entries || []).map(e => `<li>${esc(e.n)}: <span class="num">${e.cardio ? (e.min || "–") + " min" : e.sets.map(s => `${fmtN(s.kg)}×${s.reps ?? "–"}`).join(" · ")}</span>${e.feel ? ` <span class="pill ${e.feel === "Fácil" ? "good" : e.feel === "Al fallo" ? "up" : e.feel === "Duro" ? "warn" : "keep"}">${esc(e.feel)}</span>` : ""}${e.note ? ` <span class="muted">— ${esc(e.note)}</span>` : ""}</li>`).join("")}</ul>
     ${mobLogText(l) ? `<p class="small muted" style="margin-top:6px">${esc(mobLogText(l))}</p>` : ""}${l.note ? `<p class="small" style="margin-top:6px">${esc(l.note)}</p>` : ""}
+    ${S.hrEdit === l.id && hrTop ? "" : hrBlock(l)}
     <div style="margin-top:6px">${S.confirmDel === "l:" + l.id ? `<button class="btn danger" data-dellog="${l.id}">Confirmar borrado</button>` : `<button class="editbtn" data-askdel="l:${l.id}">Borrar sesión</button>`}</div></details>`).join("") : `<div class="empty">Todavía no hay sesiones registradas.</div>`;
   return `<div class="top"><div><div class="eyebrow">Desde el ${first ? fmtDate(first.date, {day: "numeric", month: "long"}) : "primer registro"}</div><h1>Progreso</h1></div></div>
-    ${viewGoals()}${bodySec}${viewNut()}<section><h2 style="margin-bottom:10px">Cargas por ejercicio</h2>${exSec}</section><section><h2 style="margin-bottom:6px">Sesiones</h2><div class="panel" style="padding-block:4px">${sess}</div></section>`;
+    ${hrTop}${viewGoals()}${bodySec}${viewNut()}<section><h2 style="margin-bottom:10px">Cargas por ejercicio</h2>${exSec}</section><section><h2 style="margin-bottom:6px">Sesiones</h2><div class="panel" style="padding-block:4px">${sess}</div></section>`;
 }
 
 /* Lector de la hoja de resultados EVOLT 360. El PDF trae los valores sin etiquetas, en el orden de la hoja
@@ -1745,6 +1760,114 @@ Recomendación nutricional de EVOLT: ${e.kcal ? e.kcal.join("-") + " kcal" : "�
 ${sc.slice(1, 6).map(x => `Escaneo ${x.date}: peso ${x.weight} kg, grasa ${x.bfp?.v ?? "—"} %, músculo esquelético ${x.smm?.v ?? "—"} kg, masa grasa ${x.bfm?.v ?? "—"} kg, nivel visceral ${x.vfl?.v ?? "—"}, BWI ${x.bwi ?? "—"}`).join("\n")}`;
 }
 
+/* ---------- pulso del entrenamiento (foto del reloj) ----------
+   log.hr = {photos: [assetId|dataURL], note, avg, max, min, dur, kcal, zones: {z1..z5 en %}, weights: {avg, max, min}, cardio: {avg, max, min},
+             intensity, score (1-10), summary, source, at} */
+const HR_LBL = {baja: ["Baja", "keep"], moderada: ["Moderada", "good"], alta: ["Alta", "warn"], "muy alta": ["Muy alta", "up"]};
+function hrAge() { const e = (S.evolt || []).find(x => x.age); return +(S.profile?.age || e?.age || 30); }
+const hrMax = () => Math.round(208 - 0.7 * hrAge());
+function hrIntensity(avg) { if (!avg) return null; const p = avg / hrMax(); return p < 0.6 ? "baja" : p < 0.7 ? "moderada" : p < 0.8 ? "alta" : "muy alta"; }
+const hrPhotoSrc = x => String(x).startsWith("data:") ? x : "/_blob/" + x;
+async function hrCompress(file, max = 1600, q = 0.85) {
+  const img = await createImageBitmap(file), k = Math.min(1, max / Math.max(img.width, img.height));
+  const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return new Promise(ok => c.toBlob(b => ok(b), "image/jpeg", q));
+}
+function hrBlock(l) {
+  const h = l.hr;
+  if (S.hrEdit === l.id) return hrForm(l);
+  if (!h) return `<div style="margin-top:8px"><button class="btn" data-hredit="${l.id}">♥ Añadir pulso del reloj</button></div>`;
+  const [il, ic] = HR_LBL[h.intensity] || [h.intensity || "—", "keep"];
+  const seg = (lbl, o, c) => o && (o.avg || o.max) ? `<div class="hrseg" style="--kc:${c}"><span class="eyebrow">${lbl}</span><b class="num">${o.avg ?? "–"}</b><small> media</small> · <b class="num">${o.max ?? "–"}</b><small> máx</small>${o.min != null && o.min !== "" ? ` · <span class="small muted">${o.min} min</span>` : ""}</div>` : "";
+  const zones = h.zones && Object.values(h.zones).some(v => +v > 0) ? `<div class="hrzones" aria-label="Tiempo en zonas">${[1, 2, 3, 4, 5].map(z => { const v = +h.zones["z" + z] || 0; return v ? `<span class="z${z}" style="flex:${v}" title="Zona ${z}: ${v} %">Z${z} ${Math.round(v)}%</span>` : ""; }).join("")}</div>` : "";
+  return `<div class="hrbox"><div class="row between"><div class="eyebrow">♥ Pulso</div><span class="pill ${ic}">Intensidad ${il.toLowerCase()}${h.score ? " · " + h.score + "/10" : ""}</span></div>
+    <div class="hrnums"><span><b class="num">${h.avg ?? "–"}</b><small>media</small></span><span><b class="num">${h.max ?? "–"}</b><small>máx</small></span>${h.dur ? `<span><b class="num">${h.dur}</b><small>min</small></span>` : ""}${h.kcal ? `<span><b class="num">${h.kcal}</b><small>kcal</small></span>` : ""}</div>
+    ${seg("Pesas", h.weights, "var(--plate-blue)")}${seg("Cardio", h.cardio, "var(--plate-red)")}${zones}
+    ${h.summary ? `<p class="small" style="margin-top:8px">${esc(h.summary)}</p>` : ""}${h.note ? `<p class="small muted" style="margin-top:4px">Tu nota: ${esc(h.note)}</p>` : ""}
+    ${(h.photos || []).length ? `<div class="hrphotos">${h.photos.map((x, i) => `<button class="hrph${S.hrZoom === l.id + ":" + i ? " big" : ""}" data-hrzoom="${l.id}:${i}" aria-label="Ver foto del pulso"><img src="${esc(hrPhotoSrc(x))}" alt="Gráfica de pulso ${i + 1}"></button>`).join("")}</div>` : ""}
+    <div style="margin-top:6px"><button class="editbtn" data-hredit="${l.id}">Editar pulso</button></div></div>`;
+}
+function hrForm(l) {
+  const h = l.hr || {}, f = S.hrFiles || [];
+  const aiTxt = imagesOk() ? "Claude mirará la gráfica" : ocrMode() ? "La app leerá los números de la captura y Claude los interpretará" : !HOSTED && S.apiKey ? "Claude mirará la gráfica" : "Sin entrenador IA: rellena los números a mano";
+  return `<div class="hrbox stack" style="gap:10px"><div class="eyebrow">♥ Pulso del reloj · ${esc(l.day)} · ${fmtDate(l.date, {day: "numeric", month: "short"})}</div>
+    <div class="row" style="gap:8px;align-items:center"><label class="btn" for="hr-img">${f.length || (h.photos || []).length ? "Cambiar fotos" : "Añadir foto o captura"}</label><input type="file" id="hr-img" accept="image/*" multiple hidden>
+      <span class="small muted">${f.length ? f.length + " foto" + (f.length > 1 ? "s" : "") + " nueva" + (f.length > 1 ? "s" : "") : (h.photos || []).length ? (h.photos.length + " guardada" + (h.photos.length > 1 ? "s" : "")) : "Gráfica de pulso y resumen del entreno"}</span></div>
+    ${f.length ? `<div class="hrphotos">${(S.hrUrls || []).map(u => `<span class="hrph"><img src="${u}" alt="Foto nueva"></span>`).join("")}</div>` : ""}
+    <div class="field"><label for="hr-note">¿Qué parte de la gráfica es pesas y cuál cardio?</label><textarea class="input" id="hr-note" rows="3" placeholder="Ej.: del minuto 0 al 55 pesas; del 55 al 80 cinta inclinada al 8 %. Los picos del principio son las series de press.">${esc(S.hrNote ?? h.note ?? "")}</textarea></div>
+    <details ${h.avg || h.max ? "open" : ""}><summary class="small" style="cursor:pointer">Números a mano (opcional)</summary>
+      <div class="grid2" style="margin-top:8px">${[["avg", "Pulso medio"], ["max", "Pulso máximo"], ["dur", "Duración (min)"], ["kcal", "Calorías"]].map(([k, t]) => `<div class="field"><label for="hr-${k}">${t}</label><input class="input" id="hr-${k}" inputmode="numeric" value="${esc(h[k] ?? "")}"></div>`).join("")}</div></details>
+    <p class="small muted">${aiTxt}. Tu pulso máximo estimado es ${hrMax()} ppm (por tu edad).</p>
+    <div class="row"><button class="btn primary" data-hrsave="${l.id}" ${S.hrBusy ? "disabled" : ""}>${S.hrBusy ? esc(S.hrBusy) : "Analizar y guardar"}</button><button class="btn ghost" data-act="hrCancel" ${S.hrBusy ? "disabled" : ""}>Cancelar</button>
+      ${l.hr ? `<button class="btn ghost danger" data-hrdel="${l.id}" ${S.hrBusy ? "disabled" : ""}>Quitar pulso</button>` : ""}</div></div>`;
+}
+function hrPrompt(l, note, manual, ocrText) {
+  const ses = (l.entries || []).map(e => e.cardio ? `${e.n}: ${e.min || "?"} min ${e.detail || ""}` : `${e.n}: ${(e.sets || []).length} series`).join("; ");
+  return `Analiza el pulso de un entrenamiento a partir de ${ocrText != null ? "el texto leído (OCR) de capturas" : "las imágenes adjuntas (capturas"} del reloj Samsung Galaxy Watch / Samsung Health${ocrText != null ? "" : ")"}. Usuario de ${hrAge()} años, pulso máximo estimado ${hrMax()} ppm.
+Sesión registrada: ${l.day} (${l.place === "home" ? "casa" : "gimnasio"}, ${l.date}). Ejercicios: ${ses || "—"}.
+Nota del usuario sobre qué tramo es pesas y cuál cardio: ${note || "(sin nota)"}.
+Datos a mano: ${JSON.stringify(manual)}.
+${ocrText != null ? "No puedes ver la gráfica, solo este texto; no inventes valores de tramos que no aparezcan (pon null).\nTEXTO:\n" + ocrText.slice(0, 5000) + "\n" : ""}
+Devuelve SOLO un objeto JSON: {"avg": ppm medio, "max": ppm máximo, "min": ppm mínimo, "dur": minutos, "kcal": kcal, "zones": {"z1": %, "z2": %, "z3": %, "z4": %, "z5": %} (% del tiempo en zonas de 50-60/60-70/70-80/80-90/90-100 % del pulso máximo; null si no se puede), "weights": {"avg": ppm, "max": ppm, "min": minutos} del tramo de pesas, "cardio": {"avg": ppm, "max": ppm, "min": minutos} del tramo de cardio (usa la nota del usuario para separar los tramos en la gráfica), "intensity": "baja"|"moderada"|"alta"|"muy alta", "score": 1-10, "summary": "2-3 frases en español de España, de tú: cómo fue la intensidad de las pesas y del cardio, si los descansos se ven suficientes (el pulso baja entre series) y una recomendación"}. Usa números enteros y null donde no haya dato.`;
+}
+async function hrSave(id) {
+  const l = S.logs.find(x => x.id === id); if (!l) return;
+  const files = S.hrFiles || [], note = ($("#hr-note")?.value || "").trim();
+  const manual = {}; for (const k of ["avg", "max", "dur", "kcal"]) { const v = num($("#hr-" + k)?.value); if (v != null) manual[k] = Math.round(v); }
+  S.hrNote = note; S.hrBusy = "Guardando fotos…"; render();
+  try {
+    let photos = (l.hr?.photos || []).slice();
+    const blobs = await Promise.all(files.map(f => hrCompress(f)));
+    if (blobs.length) {
+      photos = [];
+      for (const b of blobs) {
+        if (S.assets) { const r = await S.assets.upload(b, {type: "image/jpeg"}); photos.push(r.id); }
+        else { const small = await hrCompress(b, 700, 0.7); photos.push(await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(small); })); }
+      }
+    }
+    let ai = null, source = "manual";
+    const imgs = blobs.length ? blobs : [];
+    if (imgs.length && coachReady()) {
+      S.hrBusy = "Analizando la gráfica…"; render();
+      try {
+        if (imagesOk() && S.sample) { ai = await S.sample.json(hrPrompt(l, note, manual), {images: imgs.slice(0, maxImages()), cache: false}); source = "Claude (imagen)"; }
+        else if (ocrMode()) {
+          S.hrBusy = "Leyendo la captura…"; render();
+          const w = await ocrWorker(); let txt = "";
+          for (const b of imgs) { const {data} = await w.recognize(await ocrImage(b)); txt += (data.text || "") + "\n---\n"; }
+          S.hrBusy = "Analizando…"; render();
+          ai = await S.sample.json(hrPrompt(l, note, manual, txt), {cache: false}); source = "Claude (texto de la captura)";
+        } else if (!HOSTED && S.apiKey) {
+          const out = await askAnthropic([{role: "user", content: hrPrompt(l, note, manual) + "\nResponde solo con el JSON."}], undefined, imgs.map(b => new File([b], "pulso.jpg", {type: "image/jpeg"})));
+          const m = out.match(/\{[\s\S]*\}/); ai = m ? JSON.parse(m[0]) : null; source = "Claude (imagen)";
+        }
+      } catch (e) { toast("No se pudo analizar la imagen; guardo tus datos."); }
+    }
+    const intN = v => v == null || v === "" || isNaN(+v) ? null : Math.round(+v);
+    const segN = o => o && typeof o === "object" ? {avg: intN(o.avg), max: intN(o.max), min: intN(o.min)} : null;
+    const hr = {photos, note, source, at: new Date().toISOString(),
+      avg: manual.avg ?? intN(ai?.avg), max: manual.max ?? intN(ai?.max), min: intN(ai?.min), dur: manual.dur ?? intN(ai?.dur), kcal: manual.kcal ?? intN(ai?.kcal),
+      zones: ai?.zones && typeof ai.zones === "object" ? Object.fromEntries([1, 2, 3, 4, 5].map(z => [`z${z}`, intN(ai.zones["z" + z]) ?? 0])) : null,
+      weights: segN(ai?.weights), cardio: segN(ai?.cardio), score: intN(ai?.score), summary: typeof ai?.summary === "string" ? ai.summary.slice(0, 800) : ""};
+    hr.intensity = HR_LBL[ai?.intensity] ? ai.intensity : hrIntensity(hr.avg);
+    if (!hr.avg && !hr.max && !photos.length && !note) { toast("Añade una foto, una nota o los números."); S.hrBusy = ""; render(); return; }
+    const {id: _i, ...rest} = l; await S.db.doc("logs/" + id).set({...rest, hr});
+    hrReset(); toast("Pulso guardado");
+  } catch (e) { toast(e?.code === "quota_exceeded" ? "No queda espacio para más fotos." : "No se pudo guardar el pulso."); S.hrBusy = ""; }
+  render();
+}
+function hrReset() { (S.hrUrls || []).forEach(u => URL.revokeObjectURL(u)); S.hrEdit = null; S.hrFiles = []; S.hrUrls = []; S.hrNote = null; S.hrBusy = ""; }
+function hrPendingCard() {
+  const l = S.logs.find(x => !x.hr && x.date >= isoAdd(todayISO(), -2)); if (!l || S.hrEdit && S.hrEdit !== l.id) return "";
+  if (S.hrEdit === l.id) return `<section>${hrForm(l)}</section>`;
+  return `<div class="panel hrask"><div><b>¿Añades el pulso de tu sesión?</b><div class="small muted">${esc(l.day)} · ${fmtDate(l.date, {weekday: "long", day: "numeric"})}. Sube la captura de la gráfica de tu reloj y sabré la intensidad de las pesas y del cardio.</div></div><button class="btn primary" data-hredit="${l.id}">♥ Añadir pulso</button></div>`;
+}
+function hrLogText(h) {
+  if (!h) return "";
+  const sg = (l, o) => o && (o.avg || o.max) ? ` · ${l}: media ${o.avg ?? "?"} máx ${o.max ?? "?"}${o.min ? " (" + o.min + " min)" : ""}` : "";
+  return `pulso medio ${h.avg ?? "?"} máx ${h.max ?? "?"}${h.dur ? ", " + h.dur + " min" : ""}${h.kcal ? ", " + h.kcal + " kcal" : ""}, intensidad ${h.intensity || "?"}${h.score ? " " + h.score + "/10" : ""}${sg("pesas", h.weights)}${sg("cardio", h.cardio)}${h.zones ? " · zonas " + [1, 2, 3, 4, 5].map(z => "Z" + z + " " + (h.zones["z" + z] || 0) + "%").join(" ") : ""}${h.note ? ` · nota: ${h.note}` : ""}${h.summary ? ` · análisis: ${h.summary}` : ""}`;
+}
+
 /* ---------- vista: entrenador ---------- */
 function md(src) {
   const lines = esc(src).split("\n"); let out = "", list = null;
@@ -1876,7 +1999,7 @@ function context() {
   const pr = S.profile || {}, P = S.plans;
   const plan = k => (P[k]?.days || []).map(d => `${d.name}\n` + d.ex.map(x => `  - ${x.n} | objetivo ${x.t} | último ${x.last || "—"}${x.note ? " | nota: " + x.note : ""}${x.tip ? " | técnica: " + x.tip : ""} | progresión: ${x.prog || "—"}`).join("\n")).join("\n");
   const body = [...S.body].sort((a, b) => a.date.localeCompare(b.date)).map(b => `${b.date}: ${b.weight} kg, ${b.fat ?? "–"}% grasa, ${b.muscle ?? "–"} kg músculo, IMC ${bmi(b.weight).toFixed(1)} (${b.source || "—"}${b.note ? "; " + b.note : ""})`).join("\n");
-  const logs = S.logs.slice(0, 15).map(l => `${l.date} · ${l.place === "home" ? "Casa" : "Gimnasio"} · ${l.day}${l.energy ? " · energía " + l.energy + "/5" : ""}${mobLogText(l) ? " · " + mobLogText(l) : ""}${l.note ? " · " + l.note : ""}\n` +
+  const logs = S.logs.slice(0, 15).map(l => `${l.date} · ${l.place === "home" ? "Casa" : "Gimnasio"} · ${l.day}${l.energy ? " · energía " + l.energy + "/5" : ""}${mobLogText(l) ? " · " + mobLogText(l) : ""}${l.note ? " · " + l.note : ""}${l.hr ? "\n  PULSO: " + hrLogText(l.hr) : ""}\n` +
     (l.entries || []).map(e => `  - ${e.n}: ${e.cardio ? (e.min || "–") + " min " + (e.detail || "") : e.sets.map(s => `${s.kg ?? "–"}kg×${s.reps ?? "–"}`).join(", ")}${e.feel ? " [" + e.feel + "]" : ""}${e.note ? " (" + e.note + ")" : ""}`).join("\n")).join("\n");
   const daily = [...S.daily].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14).map(d => `${d.date}: ${d.steps ?? "–"} pasos, ${d.kcal ?? "–"} kcal, P ${d.protein ?? "–"} g, G ${d.fat ?? "–"} g, HC ${d.carbs ?? "–"} g (${d.source || ""})`).join("\n");
   const wi = weekdayIdx("gym", todayISO());
@@ -1924,6 +2047,7 @@ function rules() {
 - Ten en cuenta su horario de trabajo: en semanas de tarde suele entrenar por la mañana y en semanas de mañana por la tarde; los días de teletrabajo entrena en casa con la rutina de casa. Ajusta volumen, horario de comidas y descanso a su turno (tienes el horario de cada código de turno).
 - Los pesajes son revisiones con su entrenador del gimnasio en las que mide su composición corporal y reajustan ejercicios. Si se acerca uno, ayúdale a preparar qué preguntar y qué revisar; después, analiza el resultado frente a sus objetivos.
 - Si pregunta por su EVOLT, explícalo en lenguaje sencillo: qué significa cada dato, qué está en rango y qué no, cómo ha cambiado desde el escaneo anterior y qué hacer (entreno y comida). Compara la recomendación de EVOLT con sus macros objetivo.
+- Pulso: algunas sesiones traen PULSO (del reloj). Úsalo para juzgar la intensidad real (pesas vs cardio, descansos, zonas) y la recuperación; compáralo entre sesiones del mismo día de rutina. Su pulso máximo estimado es ${hrMax()} ppm.
 - Comidas del día: usa su OBJETIVO DIARIO y lo que lleva HOY para calcular lo que le queda (kcal y gramos de proteína, hidratos y grasas). Cuando pregunte qué comer, propone las siguientes comidas que encajen en lo que le queda, según la hora y su turno de trabajo (cuántas comidas le quedan, cena ligera si es tarde, comida transportable si trabaja presencial), con cantidades en gramos y macros aproximados de cada plato. Prioriza llegar a la proteína.
 - En nutrición da ejemplos prácticos con comida española habitual y cantidades aproximadas.
 - Si menciona dolor, lesión, mareo u otro síntoma médico, recomienda parar y consultar con un profesional sanitario; no diagnostiques.
@@ -2075,7 +2199,9 @@ function buildTables() {
   for (const l of logs) for (const [k, t] of [["warm", "calentamiento"], ["stretch", "estiramiento"]]) (l[k] || []).forEach(x => mob.push([l.date, place(l.place), l.day, t, x.n, x.done ? "sí" : "no", l.id]));
   const evolt = [["fecha", "hora", "peso_kg", "masa_magra_kg", "musculo_esqueletico_kg", "proteina_kg", "minerales_kg", "agua_kg", "masa_grasa_kg", "grasa_pct", "grasa_subcutanea_kg", "grasa_visceral_kg", "nivel_visceral", "area_visceral_cm2", "bmr_kcal", "tee_kcal", "edad_biologica", "bwi", "abdomen_cm", "cintura_cadera", ...EV_ZONES.flatMap(([z]) => [z + "_musculo_kg", z + "_grasa_kg"])],
       ...evScans().reverse().map(e => [e.date, e.time, e.weight, e.lbm?.v, e.smm?.v, e.protein?.v, e.minerals?.v, e.tbw?.v, e.bfm?.v, e.bfp?.v, e.subq?.v, e.visMass?.v, e.vfl?.v, e.vfa?.v, e.bmr, e.tee, e.bioAge, e.bwi, e.waist?.v, e.whr?.v, ...EV_ZONES.flatMap(([z]) => [e.seg?.[z]?.lean?.v, e.seg?.[z]?.fat?.v])])];
-  return [["Series", "series.csv", series], ["Cardio", "cardio.csv", cardio], ["Calentamiento", "calentamiento_estiramientos.csv", mob], ["Composición", "composicion_corporal.csv", body], ["Nutrición", "nutricion_y_pasos.csv", daily], ["EVOLT", "evolt.csv", evolt], ["Rutinas", "rutinas.csv", plans]];
+  const pulse = [["fecha", "lugar", "dia", "pulso_medio", "pulso_max", "pulso_min", "duracion_min", "kcal", "intensidad", "puntuacion", "pesas_media", "pesas_max", "pesas_min", "cardio_media", "cardio_max", "cardio_min", "z1_pct", "z2_pct", "z3_pct", "z4_pct", "z5_pct", "nota", "analisis", "id_sesion"]];
+  for (const l of logs) if (l.hr) { const h = l.hr; pulse.push([l.date, place(l.place), l.day, h.avg, h.max, h.min, h.dur, h.kcal, h.intensity, h.score, h.weights?.avg, h.weights?.max, h.weights?.min, h.cardio?.avg, h.cardio?.max, h.cardio?.min, ...[1, 2, 3, 4, 5].map(z => h.zones?.["z" + z]), h.note, h.summary, l.id]); }
+  return [["Series", "series.csv", series], ["Pulso", "pulso.csv", pulse], ["Cardio", "cardio.csv", cardio], ["Calentamiento", "calentamiento_estiramientos.csv", mob], ["Composición", "composicion_corporal.csv", body], ["Nutrición", "nutricion_y_pasos.csv", daily], ["EVOLT", "evolt.csv", evolt], ["Rutinas", "rutinas.csv", plans]];
 }
 function buildExport() {
   return [...buildTables().map(([, name, rows]) => ({name, mime: "text/csv", text: csv(rows)})),
@@ -2257,6 +2383,10 @@ document.addEventListener("click", async ev => {
   if (ds.evsel) { S.evSel = ds.evsel; S.confirmDel = null; render(); return; }
   if (ds.evimp) return evImportDrive(ds.evimp);
   if (ds.delev) { try { await S.db.doc("evolt/" + ds.delev).delete(); S.confirmDel = null; toast("Escaneo borrado (la medición de Progreso se mantiene)"); } catch { toast("No se pudo borrar."); } return; }
+  if (ds.hredit) { hrReset(); S.hrEdit = ds.hredit; S.hrOpen = ds.hredit; render(); setTimeout(() => $("#hr-note")?.scrollIntoView({block: "center"}), 50); return; }
+  if (ds.hrsave) return hrSave(ds.hrsave);
+  if (ds.hrdel) { const l = S.logs.find(x => x.id === ds.hrdel); if (l) { const {id, hr, ...rest} = l; try { await S.db.doc("logs/" + id).set(rest); hrReset(); toast("Pulso quitado"); } catch { toast("No se pudo quitar."); } } render(); return; }
+  if (ds.hrzoom) { S.hrZoom = S.hrZoom === ds.hrzoom ? null : ds.hrzoom; render(); return; }
   if (ds.mobchk) {
     const [k, i] = ds.mobchk.split(":"), b = mobBlockFor(S.place, S.dayIdx); if (!b) return;
     S.draft.mob = S.draft.mob || {}; const m = S.draft.mob[k] = S.draft.mob[k] || {};
@@ -2350,6 +2480,7 @@ document.addEventListener("click", async ev => {
   if (a === "stop") { S.ctl?.abort(); return; }
   if (a === "askClear") { S.confirmClear = true; render(); return; }
   if (a === "clearChat") { S.chat = []; S.confirmClear = false; render(); persistChat(); return; }
+  if (a === "hrCancel") { hrReset(); render(); return; }
   if (a === "abNow") { abGranted = null; return runBackup(true); }
   if (a === "abToggle") { const on = S.backup?.enabled !== false; try { await S.db.doc("backup/auto").set({...(S.backup || {}), enabled: !on}); toast(on ? "Copia automática desactivada" : "Copia automática activada"); if (!on) runBackup(true); } catch { toast("No se pudo cambiar."); } return; }
   if (a === "mobNew") { mobStartEdit({id: null, name: "", warm: [{n: "", d: ""}], stretch: [{n: "", d: ""}]}); render(); return; }
@@ -2473,7 +2604,7 @@ document.addEventListener("input", ev => {
   else if (t.id === "sdate") { S.draft.date = t.value; saveDraftLocal(); }
   else if (t.id === "ask") { S.askDraft = t.value; t.style.height = "auto"; t.style.height = Math.min(160, t.scrollHeight) + "px"; }
 });
-document.addEventListener("change", ev => { if (ev.target.id === "gcalWrite") { S.gcalWrite = ev.target.checked; lsSet("rc.gcalWrite", S.gcalWrite); render(); return; } if (ev.target.dataset?.shpick) { S.shPick = S.shPick || new Set(); ev.target.checked ? S.shPick.add(ev.target.dataset.shpick) : S.shPick.delete(ev.target.dataset.shpick); return; } if (ev.target.id === "coachImg") { addAttach([...ev.target.files]); ev.target.value = ""; return; } if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
+document.addEventListener("change", ev => { if (ev.target.id === "hr-img") { S.hrNote = $("#hr-note")?.value ?? S.hrNote; (S.hrUrls || []).forEach(u => URL.revokeObjectURL(u)); S.hrFiles = [...ev.target.files].filter(f => /^image\//.test(f.type)).slice(0, 3); S.hrUrls = S.hrFiles.map(f => URL.createObjectURL(f)); render(); return; } if (ev.target.id === "gcalWrite") { S.gcalWrite = ev.target.checked; lsSet("rc.gcalWrite", S.gcalWrite); render(); return; } if (ev.target.dataset?.shpick) { S.shPick = S.shPick || new Set(); ev.target.checked ? S.shPick.add(ev.target.dataset.shpick) : S.shPick.delete(ev.target.dataset.shpick); return; } if (ev.target.id === "coachImg") { addAttach([...ev.target.files]); ev.target.value = ""; return; } if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
 document.addEventListener("paste", ev => { if (ev.target.id !== "ask" || !imagesOk()) return; const imgs = [...(ev.clipboardData?.files || [])].filter(f => f.type.startsWith("image/")); if (imgs.length) { ev.preventDefault(); addAttach(imgs); } });
 document.addEventListener("toggle", ev => { const m = /^mob-(warm|stretch)$/.exec(ev.target.id || ""); if (m) { S.mobOpen = S.mobOpen || {}; S.mobOpen[m[1]] = ev.target.open; } }, true);
 document.addEventListener("toggle", ev => { if (ev.target.id === "evImp") S.evOpen = ev.target.open; }, true);
@@ -2482,7 +2613,7 @@ document.addEventListener("toggle", ev => { if (ev.target.id === "prevDetails") 
 document.addEventListener("keydown", ev => { if (ev.target.id === "ask" && ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); send(ev.target.value); } });
 
 /* ---------- datos ---------- */
-let rTimer; const soon = () => { clearTimeout(rTimer); rTimer = setTimeout(() => { const a = document.activeElement; if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && S.tab !== "prog") return; render(); }, 30); };
+let rTimer; const soon = () => { clearTimeout(rTimer); rTimer = setTimeout(() => { const a = document.activeElement; if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && (S.tab !== "prog" || S.hrEdit)) return; render(); }, 30); };
 render();
 /* Versión independiente instalada desde GitHub Pages: registra el service worker (instalable y sin conexión). */
 if (!HOSTED && "serviceWorker" in navigator && location.protocol === "https:") addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
