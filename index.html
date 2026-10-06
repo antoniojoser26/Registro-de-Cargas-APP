@@ -599,7 +599,7 @@ const unitOf = str => /lado/i.test(str || "") ? "kg por lado" : /total/i.test(st
 /* Última sesión anterior a la fecha de hoy del mismo día de rutina (por posición: «Día 4» en gimnasio o en casa). */
 function prevSessionOfDay(dayIdx, beforeIso) {
   for (const l of S.logs) {
-    if (!l.date || l.date >= beforeIso) continue;
+    if (!l.date || l.date >= beforeIso || l.place !== S.place) continue; // gimnasio y casa por separado
     const i = (S.plans[l.place]?.days || []).findIndex(d => d.name === l.day);
     if (i === dayIdx) return l;
   }
