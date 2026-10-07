@@ -507,6 +507,55 @@ nav.tabs button{font-size:10px;letter-spacing:-.02em}
 .mzsvg{width:100%;height:70px;display:block;background:#0F2A44;border-radius:8px}
 
 .renm{border:0;padding:0;margin:0;display:grid;gap:4px}.renm legend{padding:0;margin-bottom:2px;color:var(--muted)}.renm label{display:flex;gap:8px;align-items:flex-start}
+
+/* ===== Cristal líquido: un color por pestaña, fondo de manchas difuminadas y tarjetas translúcidas ===== */
+body{--t:#3E7BFA;--c1:#7AA7FF;--c2:#B79BFF;--c3:#7EE0C3;--c4:#9FD3FF;background:#EEF1F8}
+body[data-tab="log"]{--t:#16A34A;--c1:#5EE0A0;--c2:#7DD3FC;--c3:#A7F3D0;--c4:#C4B5FD}
+body[data-tab="plan"]{--t:#EA6A1E;--c1:#FFB37A;--c2:#FFD27A;--c3:#FF9EAE;--c4:#9FC2FF}
+body[data-tab="vid"]{--t:#E11D48;--c1:#FF8FA8;--c2:#FFB37A;--c3:#C4B5FD;--c4:#FBCFE8}
+body[data-tab="cal"]{--t:#0891B2;--c1:#67E8F9;--c2:#93C5FD;--c3:#A7F3D0;--c4:#DDD6FE}
+body[data-tab="prog"]{--t:#2F6BF0;--c1:#7AA7FF;--c2:#B79BFF;--c3:#7EE0C3;--c4:#9FD3FF}
+body[data-tab="evolt"]{--t:#7C3AED;--c1:#B79BFF;--c2:#F0ABFC;--c3:#93C5FD;--c4:#C4B5FD}
+body[data-tab="coach"]{--t:#DB2777;--c1:#F9A8D4;--c2:#C4B5FD;--c3:#FDBA74;--c4:#FBCFE8}
+body[data-tab="me"]{--t:#0D9488;--c1:#5EEAD4;--c2:#93C5FD;--c3:#C4B5FD;--c4:#A7F3D0}
+.aurora{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.aurora i{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;transition:background 1.2s ease}
+.aurora .b1{width:62vmax;height:62vmax;left:-22vmax;top:-26vmax;background:var(--c1)}
+.aurora .b2{width:52vmax;height:52vmax;right:-24vmax;top:6vmax;background:var(--c2);opacity:.45}
+.aurora .b3{width:56vmax;height:56vmax;left:-14vmax;bottom:-30vmax;background:var(--c3);opacity:.42}
+.aurora .b4{width:40vmax;height:40vmax;right:-10vmax;bottom:-12vmax;background:var(--c4);opacity:.4}
+@media (prefers-reduced-motion:no-preference){
+  .aurora .b1{animation:fl1 38s ease-in-out infinite alternate}.aurora .b2{animation:fl2 46s ease-in-out infinite alternate}
+  .aurora .b3{animation:fl3 52s ease-in-out infinite alternate}.aurora .b4{animation:fl2 60s ease-in-out infinite alternate-reverse}
+  @keyframes fl1{to{transform:translate(14vmax,10vmax) scale(1.1)}}@keyframes fl2{to{transform:translate(-12vmax,14vmax) scale(.92)}}@keyframes fl3{to{transform:translate(16vmax,-10vmax) scale(1.08)}}
+}
+.wrap{position:relative;z-index:1}
+/* tarjetas de cristal */
+.panel,.ex,.kpi,.extable,.foodcard,.mobcard,.prevcard,.weekcard,.evhero,.savebar,.vadd,.msg.a,.daypick button:not([aria-pressed="true"]),.empty{
+  background:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.75);
+  box-shadow:0 8px 28px rgba(30,40,90,.08),inset 0 1px 0 rgba(255,255,255,.9)}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .panel,.ex,.kpi,.extable,.foodcard,.mobcard,.prevcard,.weekcard,.evhero,.savebar,.vadd,.msg.a,.daypick button:not([aria-pressed="true"]),.empty{
+    -webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6)}}
+.empty{border:1.5px dashed rgba(255,255,255,.9)}
+.mobit,.evzone,.hrbox,.evmac>div,.input,select.input,textarea.input,.step{background:rgba(255,255,255,.55)}
+.seg{background:rgba(255,255,255,.45)}
+.composer{background:transparent}
+.composer .box{background:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.8);border-radius:24px;padding:6px;box-shadow:0 8px 28px rgba(30,40,90,.10);-webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6)}
+/* barra de abajo flotante de cristal */
+nav.tabs{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:6px 4px;border-radius:28px;
+  background:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.8);box-shadow:0 12px 34px rgba(30,40,90,.16),inset 0 1px 0 #fff;
+  -webkit-backdrop-filter:blur(24px) saturate(1.8);backdrop-filter:blur(24px) saturate(1.8);max-width:760px;margin:0 auto}
+nav.tabs button{border-radius:20px;transition:background .25s,color .25s}
+nav.tabs button[aria-current="page"]{color:var(--ink);background:color-mix(in srgb,var(--t) 16%,rgba(255,255,255,.5))}
+nav.tabs button[aria-current="page"] svg{stroke:var(--t)}
+.fab{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+/* toques de color de la pestaña */
+.top .eyebrow{color:color-mix(in srgb,var(--t) 70%,var(--muted))}
+.daypick button[aria-pressed="true"]{background:linear-gradient(135deg,var(--t),color-mix(in srgb,var(--t) 70%,#fff));border-color:transparent}
+.seg button[aria-pressed="true"]{box-shadow:0 2px 8px color-mix(in srgb,var(--t) 25%,transparent)}
+nav.tabs{padding:6px 2px}nav.tabs button{padding:6px 0;letter-spacing:-.02em;font-size:9.5px}nav.tabs button[aria-current="page"]{font-weight:500}
+.fab{background:var(--t);box-shadow:0 10px 26px color-mix(in srgb,var(--t) 45%,transparent);transition:background 1.2s ease}
 </style>
 
 </head>
@@ -517,6 +566,7 @@ nav.tabs button{font-size:10px;letter-spacing:-.02em}
 </div>
 <div class="toast" id="toast" hidden></div>
 <div id="fabwrap"></div>
+<div class="aurora" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
 <nav class="tabs" aria-label="Secciones"><div class="in" id="tabs"></div></nav>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -730,6 +780,7 @@ function renderTabs() {
   $("#tabs").innerHTML = TABS.map(([k, l, ic]) => `<button data-tab="${k}" ${S.tab === k ? 'aria-current="page"' : ""}><svg viewBox="0 0 24 24">${ic}</svg>${l}</button>`).join("");
 }
 function render() {
+  document.body.dataset.tab = S.tab;
   renderTabs(); renderFab();
   const banner = S.dbState === "off" ? `<div class="banner">Abre esta app dentro de Claude para guardar y ver tus datos. Ahora mismo no se pueden leer ni guardar.</div>` : "";
   const v = {log: viewLog, plan: viewPlan, vid: viewVid, cal: viewCal, prog: viewProg, evolt: viewEvolt, coach: viewCoach, me: viewMe}[S.tab]();
