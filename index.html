@@ -505,6 +505,8 @@ nav.tabs button{font-size:10px;letter-spacing:-.02em}
 .hrdi{display:flex;gap:10px;align-items:flex-start;cursor:pointer}.hrdi>span{display:flex;flex-direction:column;min-width:0}.hrdi b{font-weight:600;overflow-wrap:anywhere}
 
 .mzsvg{width:100%;height:70px;display:block;background:#0F2A44;border-radius:8px}
+
+.renm{border:0;padding:0;margin:0;display:grid;gap:4px}.renm legend{padding:0;margin-bottom:2px;color:var(--muted)}.renm label{display:flex;gap:8px;align-items:flex-start}
 </style>
 
 </head>
@@ -564,7 +566,7 @@ const S = {
   mcp: null, assets: null, videos: {}, vPlace: "gym", vAdd: null, vMode: "drive", driveFiles: null, driveState: "idle", driveErr: "", uploading: false,
   daily: [], nutMetric: "kcal", importing: "",
   editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, gcalWrite: lsGet("rc.gcalWrite") !== false, gcalMap: {}, showIdeas: false, attach: [], attachUrls: [], attachOcr: [], imgCaps: null, exporting: "", exportBusy: false,
-  backup: null, abMsg: "", hrEdit: null, hrOpen: null, hrFiles: [], hrUrls: [], hrNote: null, hrBusy: "", hrZoom: null, hrDrive: null, hrPick: null, hrFromDrive: null, mobility: null, mobEdit: null, mobDraft: null, mobOpen: null, evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
+  exNames: {}, plansLoaded: false, logsLoaded: false, backup: null, abMsg: "", hrEdit: null, hrOpen: null, hrFiles: [], hrUrls: [], hrNote: null, hrBusy: "", hrZoom: null, hrDrive: null, hrPick: null, hrFromDrive: null, mobility: null, mobEdit: null, mobDraft: null, mobOpen: null, evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
   apiKey: lsGet("rc.apikey") || "", apiModel: lsGet("rc.model") || ""
 };
 
@@ -596,20 +598,62 @@ function parseKg(str) {
   return m;
 }
 const unitOf = str => /lado/i.test(str || "") ? "kg por lado" : /total/i.test(str || "") ? "kg total" : "kg";
+/* ---------- catálogo interno de ejercicios ----------
+   Cada día (d…) y cada ejercicio (x…) de una rutina tiene un código fijo. Las sesiones guardan ese código,
+   así que el nombre es solo una etiqueta: se puede cambiar sin perder el historial, y dos ejercicios
+   distintos nunca se confunden aunque se llamen igual. Gimnasio y casa tienen códigos propios. */
+const newId = pre => pre + Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 6);
+function ensureIds(plan) {
+  let ch = false;
+  (plan?.days || []).forEach(d => { if (!d.id) { d.id = newId("d"); ch = true; } (d.ex || []).forEach(x => { if (!x.id) { x.id = newId("x"); ch = true; } }); });
+  return ch;
+}
+/* ¿Es el mismo ejercicio? Por código; las sesiones antiguas sin código, por nombre. */
+const sameEx = (e, x) => !!(e && x) && (e.id && x.id ? e.id === x.id : e.n === x.n);
+function buildExNames() { const m = {}; for (const [pl, p] of Object.entries(S.plans || {})) (p.days || []).forEach(d => (d.ex || []).forEach(x => { if (x.id) m[x.id] = {n: x.n, place: pl, day: d.name}; })); S.exNames = m; }
+/* Nombre actual del ejercicio (aunque en la sesión se guardara con otro). */
+const exName = e => (e?.id && S.exNames?.[e.id]?.n) || e?.n || "";
+/* Posición del día de una sesión en su rutina (por código; si no lo tiene, por nombre). */
+function dayOfLog(l) {
+  const days = S.plans[l.place]?.days || [];
+  let i = l.dayId ? days.findIndex(d => d.id === l.dayId) : -1;
+  if (i < 0) i = days.findIndex(d => d.name === l.day);
+  return i;
+}
+const dayLabel = l => { const i = dayOfLog(l); return i >= 0 && l.dayId && S.plans[l.place]?.days?.[i]?.id === l.dayId ? S.plans[l.place].days[i].name : l.day; };
+/* Pone código a rutinas y sesiones antiguas (una vez, al abrir). No borra nada: solo añade dayId e id. */
+let idsMigrated = false;
+async function maybeMigrateIds() {
+  if (idsMigrated || !S.db || !S.plansLoaded || !S.logsLoaded || S.dbState !== "on") return; idsMigrated = true;
+  try {
+    for (const pl of Object.keys(S.plans)) { const pp = JSON.parse(JSON.stringify(S.plans[pl])); if (ensureIds(pp)) { await S.db.doc("plan/" + pl).set(pp); S.plans[pl] = pp; } }
+    buildExNames();
+    for (const l of S.logs) {
+      const days = S.plans[l.place]?.days || []; let ch = false; const out = JSON.parse(JSON.stringify(l)); delete out.id;
+      let day = l.dayId ? days.find(d => d.id === l.dayId) : null;
+      if (!day) { day = days.find(d => d.name === l.day); if (day && !l.dayId) { out.dayId = day.id; ch = true; } }
+      (out.entries || []).forEach(e => { if (e.id) return; const x = day?.ex.find(x => x.n === e.n) || days.flatMap(d => d.ex || []).find(x => x.n === e.n); if (x) { e.id = x.id; ch = true; } });
+      // día renombrado antes de existir los códigos: el día cuyos ejercicios coinciden con los de la sesión
+      if (!day && !out.dayId) { const ids = new Set((out.entries || []).map(e => e.id).filter(Boolean)); let best = null, bn = 0;
+        days.forEach(d => { const n = (d.ex || []).filter(x => ids.has(x.id)).length; if (n > bn) { bn = n; best = d; } });
+        if (best && bn >= Math.max(2, Math.ceil(ids.size / 2))) { out.dayId = best.id; ch = true; } }
+      if (ch) await S.db.doc("logs/" + l.id).set(out);
+    }
+  } catch { idsMigrated = false; }
+}
 /* Última sesión anterior a la fecha de hoy del mismo día de rutina (por posición: «Día 4» en gimnasio o en casa). */
 function prevSessionOfDay(dayIdx, beforeIso) {
   for (const l of S.logs) {
     if (!l.date || l.date >= beforeIso || l.place !== S.place) continue; // gimnasio y casa por separado
-    const i = (S.plans[l.place]?.days || []).findIndex(d => d.name === l.day);
-    if (i === dayIdx) return l;
+    if (dayOfLog(l) === dayIdx) return l;
   }
   return null;
 }
 /* Referencia por ejercicio: primero la sesión anterior del mismo día; si no estaba, la última vez que lo hiciste. */
-function prevFor(name) {
-  const ps = S.prevSess, e = ps && (ps.entries || []).find(x => x.n === name && !x.cardio);
+function prevFor(ex) {
+  const ps = S.prevSess, e = ps && (ps.entries || []).find(y => sameEx(y, ex) && !y.cardio);
   if (e) return {log: ps, e};
-  const le = lastEntry(S.place, name); return le && le.log.date < S.date ? le : null;
+  const le = lastEntry(S.place, ex); return le && le.log.date < S.date ? le : null;
 }
 function cmpSet(cur, prv) {
   if (!prv || prv.kg == null || cur.kg == null || cur.reps == null) return "";
@@ -620,7 +664,7 @@ function cmpSet(cur, prv) {
 }
 function refreshCmp(i, j) {
   const el = document.getElementById(`prv-${i}-${j}`); if (!el) return;
-  const e = S.draft.entries[i], pv = prevFor(e.n)?.e.sets?.[j];
+  const e = S.draft.entries[i], pv = prevFor(e)?.e.sets?.[j];
   el.classList.remove("up", "eq", "down"); const c = cmpSet(e.sets[j], pv); if (c) el.classList.add(c);
 }
 function prevPanel(dayIdx) {
@@ -628,15 +672,16 @@ function prevPanel(dayIdx) {
   if (!l) return `<div class="prevcard empty-prev"><div class="eyebrow">La última vez</div><p class="small muted" style="margin-top:4px">Todavía no hay ninguna sesión anterior de este día. Cuando la registres, aquí verás lo que hiciste para compararlo.</p></div>`;
   const days = Math.round((new Date(S.date) - new Date(l.date)) / 864e5);
   const open = lsGet("rc.prevOpen") !== false;
-  const rows = (l.entries || []).map(e => `<div class="prow"><div class="ph"><span class="pn">${esc(e.n)}</span>${e.feel ? `<span class="pill ${e.feel === "Fácil" ? "good" : e.feel === "Al fallo" ? "up" : e.feel === "Duro" ? "warn" : "keep"}">${esc(e.feel)}</span>` : ""}</div>
+  const rows = (l.entries || []).map(e => `<div class="prow"><div class="ph"><span class="pn">${esc(exName(e))}</span>${e.feel ? `<span class="pill ${e.feel === "Fácil" ? "good" : e.feel === "Al fallo" ? "up" : e.feel === "Duro" ? "warn" : "keep"}">${esc(e.feel)}</span>` : ""}</div>
     <div class="ps">${e.cardio ? `<span class="sx num">${e.min ?? "–"} min</span>${e.detail ? ` <span class="muted small">${esc(e.detail)}</span>` : ""}` : (e.sets || []).map(st => `<span class="sx num">${fmtN(st.kg)}<i>×</i>${st.reps ?? "–"}</span>`).join("")}</div>${e.note ? `<div class="pnote">${esc(e.note)}</div>` : ""}</div>`).join("");
   return `<details class="prevcard" ${open ? "open" : ""} id="prevDetails"><summary><div><div class="eyebrow">La última vez · ${days === 7 ? "hace una semana" : "hace " + days + " días"}</div>
-      <div class="pt">${esc(l.day)} <span class="muted">· ${fmtDate(l.date, {weekday: "short", day: "numeric", month: "short"})} · ${l.place === "home" ? "Casa" : "Gimnasio"}${l.energy ? " · Energía " + l.energy + "/5" : ""}</span></div></div><span class="chev" aria-hidden="true">▾</span></summary>
+      <div class="pt">${esc(dayLabel(l))} <span class="muted">· ${fmtDate(l.date, {weekday: "short", day: "numeric", month: "short"})} · ${l.place === "home" ? "Casa" : "Gimnasio"}${l.energy ? " · Energía " + l.energy + "/5" : ""}</span></div></div><span class="chev" aria-hidden="true">▾</span></summary>
     <div class="prevlist">${rows}</div>
     ${l.note ? `<p class="small" style="margin-top:8px"><b>Sensaciones:</b> ${esc(l.note)}</p>` : ""}</details>`;
 }
-function lastEntry(place, name) {
-  for (const l of S.logs) { if (l.place !== place) continue; const e = (l.entries || []).find(e => e.n === name && (e.sets || []).some(s => s.kg != null && s.kg !== "")); if (e) return {log: l, e}; }
+function lastEntry(place, ex) {
+  if (typeof ex === "string") ex = {n: ex};
+  for (const l of S.logs) { if (l.place !== place) continue; const e = (l.entries || []).find(e => sameEx(e, ex) && (e.sets || []).some(s => s.kg != null && s.kg !== "")); if (e) return {log: l, e}; }
   return null;
 }
 /* Lunes = Día 1 … Viernes = Día 5. Sábado y domingo: descanso (null). */
@@ -648,20 +693,21 @@ function weekdayIdx(place, iso) {
 }
 function buildDraft() {
   const day = S.plans[S.place]?.days?.[S.dayIdx]; if (!day) return null;
-  return {place: S.place, day: day.name, date: S.date, energy: null, note: "",
+  return {place: S.place, day: day.name, dayId: day.id || null, date: S.date, energy: null, note: "",
     entries: day.ex.map(x => {
-      if (isCardio(x.n)) return {n: x.n, cardio: true, min: parseInt(x.t) || 30, detail: x.note || "", feel: "", note: ""};
-      const reps = parseTarget(x.t); const prev = lastEntry(S.place, x.n);
+      if (isCardio(x.n)) return {n: x.n, id: x.id || null, cardio: true, min: parseInt(x.t) || 30, detail: x.note || "", feel: "", note: ""};
+      const reps = parseTarget(x.t); const prev = lastEntry(S.place, x);
       const kgs = prev ? prev.e.sets.map(s => s.kg) : parseKg(x.last);
-      return {n: x.n, target: x.t, sets: reps.map((r, i) => ({kg: kgs.length ? (kgs[i] ?? kgs[kgs.length - 1]) : null, reps: r, tgt: r})), feel: "", note: ""};
+      return {n: x.n, id: x.id || null, target: x.t, sets: reps.map((r, i) => ({kg: kgs.length ? (kgs[i] ?? kgs[kgs.length - 1]) : null, reps: r, tgt: r})), feel: "", note: ""};
     })};
 }
 function ensureDraft() {
   if (S.dayIdx == null) S.dayIdx = weekdayIdx(S.place, S.date) ?? 0;
   const day = S.plans[S.place]?.days?.[S.dayIdx];
-  if (!S.draft || S.draft.place !== S.place || S.draft.day !== day?.name) {
+  const sameDay = x => x && x.place === S.place && (x.dayId && day?.id ? x.dayId === day.id : x.day === day?.name);
+  if (!sameDay(S.draft)) {
     const saved = lsGet("rc.draft");
-    S.draft = saved && saved.place === S.place && saved.day === day?.name ? saved : buildDraft();
+    S.draft = sameDay(saved) ? saved : buildDraft();
   }
 }
 const saveDraftLocal = () => lsSet("rc.draft", S.draft);
@@ -699,7 +745,7 @@ function weekDone() {
   const t = todayISO(), mon = isoAdd(t, -((wdOf(t) + 6) % 7)), sun = isoAdd(mon, 6), out = new Set();
   for (const l of S.logs) {
     if (!l.date || l.date < mon || l.date > sun) continue;
-    const i = (S.plans[l.place]?.days || []).findIndex(d => d.name === l.day);
+    const i = dayOfLog(l);
     if (i >= 0) out.add(i);
   }
   return out;
@@ -737,17 +783,17 @@ function viewLog() {
   const d = S.draft;
   S.prevSess = prevSessionOfDay(S.dayIdx, S.date);
   const exs = d.entries.map((e, i) => {
-    const px = plan.days[S.dayIdx].ex.find(x => x.n === e.n) || {};
-    const prev = !e.cardio && prevFor(e.n);
+    const px = plan.days[S.dayIdx].ex.find(x => sameEx(e, x)) || {};
+    const prev = !e.cardio && prevFor(e);
     const prevTxt = prev ? `Anterior: ${fmtDate(prev.log.date, {weekday: "short", day: "numeric", month: "short"})}` : px.last && px.last !== "—" && px.last !== "__" ? `En el plan: ${esc(px.last)}` : "Primera vez";
     const tip = px.tip || px.note;
     const feel = `<div class="feel"><span class="lbl">Sensación</span>${["Fácil", "Bien", "Duro", "Al fallo"].map(f => `<button class="chip" data-feel="${i}" data-v="${f}" aria-pressed="${e.feel === f}">${f}</button>`).join("")}</div>`;
     const note = `<input class="input" style="margin-top:8px" id="note-${i}" data-enote="${i}" placeholder="Notas: molestias, técnica, agarre…" value="${esc(e.note)}">`;
-    if (e.cardio) return `<div class="ex"><div class="ex-h"><div><h3>${esc(e.n)}</h3><div class="ex-meta">${esc(px.t || "")}${px.note ? " · " + esc(px.note) : ""}</div></div></div>
+    if (e.cardio) return `<div class="ex"><div class="ex-h"><div><h3>${esc(exName(e))}</h3><div class="ex-meta">${esc(px.t || "")}${px.note ? " · " + esc(px.note) : ""}</div></div></div>
       <div class="grid2" style="margin-top:10px"><div class="field"><label for="min-${i}">Minutos</label><div class="step"><button data-step="min" data-i="${i}" data-d="-5" aria-label="Menos">−</button><input id="min-${i}" inputmode="numeric" data-min="${i}" value="${e.min ?? ""}"><button data-step="min" data-i="${i}" data-d="5" aria-label="Más">+</button></div></div>
       <div class="field"><label for="det-${i}">Velocidad / inclinación</label><input class="input" id="det-${i}" data-det="${i}" value="${esc(e.detail)}" placeholder="4,5 km/h · 8 %"></div></div>${feel}${note}</div>`;
     const unit = unitOf(px.last);
-    const vids = vidsOf(e.n, S.place);
+    const vids = vidsOf(exName(e), S.place);
     const vlinks = vids.length ? `<div class="vlinks">${vids.map((v, k) => v.kind === "asset" ? `<button data-vplay="${i}-${k}">▶ ${esc(v.label || "Vídeo")}</button>` : `<a href="${esc(v.url)}" target="_blank" rel="noopener">▶ ${esc(v.label || "Vídeo")} ↗</a>`).join("")}</div>
       ${vids.map((v, k) => v.kind === "asset" ? `<video id="vp-${i}-${k}" hidden controls playsinline preload="none" src="/_blob/${esc(v.asset)}" style="width:100%;max-width:420px;border-radius:8px;background:#000;margin-top:8px"></video>` : "").join("")}` : "";
     const pset = prev ? prev.e.sets || [] : [];
@@ -755,7 +801,7 @@ function viewLog() {
       <div class="prv ${cmpSet(s, pset[j])}" id="prv-${i}-${j}">${pset[j] ? `<b class="num">${fmtN(pset[j].kg)}</b><span class="num">×${pset[j].reps ?? "–"}</span>` : `<span class="muted">—</span>`}</div>
       <div class="step"><button data-step="kg" data-i="${i}" data-j="${j}" data-d="-2.5" aria-label="Menos peso">−</button><input id="kg-${i}-${j}" inputmode="decimal" data-kg="${i}-${j}" value="${s.kg ?? ""}" placeholder="kg"><button data-step="kg" data-i="${i}" data-j="${j}" data-d="2.5" aria-label="Más peso">+</button></div>
       <div class="step"><button data-step="reps" data-i="${i}" data-j="${j}" data-d="-1" aria-label="Menos reps">−</button><input id="reps-${i}-${j}" inputmode="numeric" data-reps="${i}-${j}" value="${s.reps ?? ""}" placeholder="${s.tgt ?? "reps"}"><button data-step="reps" data-i="${i}" data-j="${j}" data-d="1" aria-label="Más reps">+</button></div>`).join("");
-    return `<div class="ex"><div class="ex-h"><div style="min-width:0"><h3>${esc(e.n)}</h3><div class="ex-meta">${esc(px.t || "")} · ${prevTxt}</div></div>${progPill(px.prog)}</div>
+    return `<div class="ex"><div class="ex-h"><div style="min-width:0"><h3>${esc(exName(e))}</h3><div class="ex-meta">${esc(px.t || "")} · ${prevTxt}</div></div>${progPill(px.prog)}</div>
       ${tip ? `<div class="ex-tip">${esc(tip)}</div>` : ""}${vlinks}
       <div class="sets"><div></div><div class="hd">Antes</div><div class="hd">Peso (${unit})</div><div class="hd">Reps</div>${rows}</div>
       <button class="addset" data-addset="${i}">+ Añadir serie</button>${feel}${note}</div>`;
@@ -856,6 +902,9 @@ function viewPlanCore() {
       const key = `${di}-${xi}`;
       if (S.editing === key) return `<tr><td colspan="2"><div class="stack">
         <div class="field"><label for="e-n">Ejercicio</label><input class="input" id="e-n" value="${esc(x.n)}"></div>
+        <fieldset class="renm"><legend class="small">Si cambias el nombre:</legend>
+          <label class="small"><input type="radio" name="e-same" value="same" checked> Es el mismo ejercicio con otro nombre: conserva su historial y sus vídeos</label>
+          <label class="small"><input type="radio" name="e-same" value="new"> Es otro ejercicio distinto: empieza de cero</label></fieldset>
         <div class="grid2"><div class="field"><label for="e-t">Objetivo</label><input class="input" id="e-t" value="${esc(x.t)}"></div>
         <div class="field"><label for="e-l">Último peso</label><input class="input" id="e-l" value="${esc(x.last)}"></div></div>
         <div class="field"><label for="e-no">Notas del plan</label><input class="input" id="e-no" value="${esc(x.note)}"></div>
@@ -1487,18 +1536,19 @@ function viewProg() {
       <div>${S.confirmDel === "b:" + b.id ? `<button class="btn danger" data-delbody="${b.id}">Borrar</button>` : `<button class="editbtn" data-askdel="b:${b.id}">Borrar</button>`}</div></div>`).join("") || '<div class="muted small">Sin mediciones.</div>'}</div></div></section>`;
 
   // ejercicios
-  const names = []; S.logs.forEach(l => (l.entries || []).forEach(e => { if (!e.cardio && (e.sets || []).some(s => +s.kg > 0) && !names.includes(e.n)) names.push(e.n); }));
+  const keyOf = (l, e) => e.id || `${l.place}:${e.n}`, names = [], lbl = {};
+  S.logs.forEach(l => (l.entries || []).forEach(e => { if (e.cardio || !(e.sets || []).some(s => +s.kg > 0)) return; const k = keyOf(l, e); if (!names.includes(k)) { names.push(k); lbl[k] = `${exName(e)} · ${l.place === "home" ? "casa" : "gimnasio"}`; } }));
   if (!S.exSel || !names.includes(S.exSel)) S.exSel = names[0] || null;
   let exSec;
   if (!names.length) exSec = `<div class="empty">Cuando guardes tu primera sesión en <b>Hoy</b>, aquí verás la evolución de cada ejercicio: carga máxima, 1RM estimado y volumen.</div>`;
   else {
-    const rows = [...S.logs].reverse().map(l => ({l, e: (l.entries || []).find(e => e.n === S.exSel)})).filter(r => r.e);
+    const rows = [...S.logs].reverse().map(l => ({l, e: (l.entries || []).find(e => !e.cardio && keyOf(l, e) === S.exSel)})).filter(r => r.e);
     const val = e => { const ss = e.sets.filter(s => +s.kg > 0 && +s.reps > 0);
       if (S.exMetric === "top") return Math.max(...e.sets.map(s => +s.kg || 0));
       if (S.exMetric === "rm") return Math.max(...ss.map(s => s.kg * (1 + s.reps / 30)));
       return ss.reduce((a, s) => a + s.kg * s.reps, 0); };
     const p2 = rows.map(r => ({x: r.l.date, y: val(r.e)})).filter(p => isFinite(p.y) && p.y > 0);
-    exSec = `<div class="panel"><div class="row between" style="margin-bottom:8px"><select class="input" id="exsel" style="max-width:340px">${names.map(n => `<option ${n === S.exSel ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
+    exSec = `<div class="panel"><div class="row between" style="margin-bottom:8px"><select class="input" id="exsel" style="max-width:340px">${names.map(n => `<option value="${esc(n)}" ${n === S.exSel ? "selected" : ""}>${esc(lbl[n])}</option>`).join("")}</select>
       <div class="seg" role="group" aria-label="Métrica de ejercicio">${[["top", "Carga máx."], ["rm", "1RM est."], ["vol", "Volumen"]].map(([k, l]) => `<button data-exm="${k}" aria-pressed="${S.exMetric === k}">${l}</button>`).join("")}</div></div>
       ${lineChart(p2, {unit: "kg", dec: S.exMetric === "vol" ? 0 : 1})}
       <p class="small muted" style="margin-top:6px">1RM estimado con la fórmula de Epley. Volumen = kg × reps de todas las series.</p>
@@ -1506,7 +1556,7 @@ function viewProg() {
   }
   const hrTop = hrPendingCard();
   const sess = S.logs.length ? S.logs.slice(0, 30).map(l => `<details class="sess" ${S.hrEdit === l.id || S.hrOpen === l.id ? "open" : ""}><summary><span><b>${esc(l.day)}</b> <span class="small muted">· ${l.place === "home" ? "Casa" : "Gimnasio"}</span></span><span class="small muted num">${l.hr ? '<span class="hrdot" title="Con pulso">♥</span> ' : ""}${fmtDate(l.date)}${l.energy ? " · E" + l.energy : ""}</span></summary>
-    <ul>${(l.entries || []).map(e => `<li>${esc(e.n)}: <span class="num">${e.cardio ? (e.min || "–") + " min" : e.sets.map(s => `${fmtN(s.kg)}×${s.reps ?? "–"}`).join(" · ")}</span>${e.feel ? ` <span class="pill ${e.feel === "Fácil" ? "good" : e.feel === "Al fallo" ? "up" : e.feel === "Duro" ? "warn" : "keep"}">${esc(e.feel)}</span>` : ""}${e.note ? ` <span class="muted">— ${esc(e.note)}</span>` : ""}</li>`).join("")}</ul>
+    <ul>${(l.entries || []).map(e => `<li>${esc(exName(e))}: <span class="num">${e.cardio ? (e.min || "–") + " min" : e.sets.map(s => `${fmtN(s.kg)}×${s.reps ?? "–"}`).join(" · ")}</span>${e.feel ? ` <span class="pill ${e.feel === "Fácil" ? "good" : e.feel === "Al fallo" ? "up" : e.feel === "Duro" ? "warn" : "keep"}">${esc(e.feel)}</span>` : ""}${e.note ? ` <span class="muted">— ${esc(e.note)}</span>` : ""}</li>`).join("")}</ul>
     ${mobLogText(l) ? `<p class="small muted" style="margin-top:6px">${esc(mobLogText(l))}</p>` : ""}${l.note ? `<p class="small" style="margin-top:6px">${esc(l.note)}</p>` : ""}
     ${S.hrEdit === l.id && hrTop ? "" : hrBlock(l)}
     <div style="margin-top:6px">${S.confirmDel === "l:" + l.id ? `<button class="btn danger" data-dellog="${l.id}">Confirmar borrado</button>` : `<button class="editbtn" data-askdel="l:${l.id}">Borrar sesión</button>`}</div></details>`).join("") : `<div class="empty">Todavía no hay sesiones registradas.</div>`;
@@ -1930,7 +1980,7 @@ function hrForm(l) {
       ${l.hr ? `<button class="btn ghost danger" data-hrdel="${l.id}" ${S.hrBusy ? "disabled" : ""}>Quitar pulso</button>` : ""}</div></div>`;
 }
 function hrPrompt(l, note, manual, ocrText) {
-  const ses = (l.entries || []).map(e => e.cardio ? `${e.n}: ${e.min || "?"} min ${e.detail || ""}` : `${e.n}: ${(e.sets || []).length} series`).join("; ");
+  const ses = (l.entries || []).map(e => e.cardio ? `${exName(e)}: ${e.min || "?"} min ${e.detail || ""}` : `${exName(e)}: ${(e.sets || []).length} series`).join("; ");
   return `Analiza el pulso de un entrenamiento a partir de ${ocrText != null ? "el texto leído (OCR) de capturas" : "las imágenes adjuntas (capturas"} de la app MyZone (cinta MZ-3) o del reloj Samsung Galaxy Watch / Samsung Health${ocrText != null ? "" : ")"}. En MyZone las zonas por color son: gris 50-59 %, azul 60-69 %, verde 70-79 %, amarillo 80-89 % y rojo 90-100 % del pulso máximo, y muestra MEPs (puntos de esfuerzo) y el esfuerzo medio en %; si la captura trae su propio pulso máximo o sus zonas, usa los de la captura. Usuario de ${hrAge()} años, pulso máximo ${hrMax()} ppm${S.profile?.hrMax ? " (calibrado con sus datos de MyZone)" : ""}; en MyZone, ppm ≈ esfuerzo % × ${(hrMax() / 100).toFixed(2)}.
 Sesión registrada: ${l.day} (${l.place === "home" ? "casa" : "gimnasio"}, ${l.date}). Ejercicios: ${ses || "—"}.
 Nota del usuario sobre qué tramo es pesas y cuál cardio: ${note || "(sin nota)"}.
@@ -2144,7 +2194,7 @@ function context() {
   const plan = k => (P[k]?.days || []).map(d => `${d.name}\n` + d.ex.map(x => `  - ${x.n} | objetivo ${x.t} | último ${x.last || "—"}${x.note ? " | nota: " + x.note : ""}${x.tip ? " | técnica: " + x.tip : ""} | progresión: ${x.prog || "—"}`).join("\n")).join("\n");
   const body = [...S.body].sort((a, b) => a.date.localeCompare(b.date)).map(b => `${b.date}: ${b.weight} kg, ${b.fat ?? "–"}% grasa, ${b.muscle ?? "–"} kg músculo, IMC ${bmi(b.weight).toFixed(1)} (${b.source || "—"}${b.note ? "; " + b.note : ""})`).join("\n");
   const logs = S.logs.slice(0, 15).map(l => `${l.date} · ${l.place === "home" ? "Casa" : "Gimnasio"} · ${l.day}${l.energy ? " · energía " + l.energy + "/5" : ""}${mobLogText(l) ? " · " + mobLogText(l) : ""}${l.note ? " · " + l.note : ""}${l.hr ? "\n  PULSO: " + hrLogText(l.hr) : ""}\n` +
-    (l.entries || []).map(e => `  - ${e.n}: ${e.cardio ? (e.min || "–") + " min " + (e.detail || "") : e.sets.map(s => `${s.kg ?? "–"}kg×${s.reps ?? "–"}`).join(", ")}${e.feel ? " [" + e.feel + "]" : ""}${e.note ? " (" + e.note + ")" : ""}`).join("\n")).join("\n");
+    (l.entries || []).map(e => `  - ${exName(e)}: ${e.cardio ? (e.min || "–") + " min " + (e.detail || "") : e.sets.map(s => `${s.kg ?? "–"}kg×${s.reps ?? "–"}`).join(", ")}${e.feel ? " [" + e.feel + "]" : ""}${e.note ? " (" + e.note + ")" : ""}`).join("\n")).join("\n");
   const daily = [...S.daily].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14).map(d => `${d.date}: ${d.steps ?? "–"} pasos, ${d.kcal ?? "–"} kcal, P ${d.protein ?? "–"} g, G ${d.fat ?? "–"} g, HC ${d.carbs ?? "–"} g (${d.source || ""})`).join("\n");
   const wi = weekdayIdx("gym", todayISO());
   return `Hoy es ${fmtDate(todayISO(), {weekday: "long", day: "numeric", month: "long", year: "numeric"})} (${todayISO()}). Según su calendario (lunes Día 1 … viernes Día 5, fin de semana descanso), hoy toca: ${wi == null ? "descanso" : (S.plans.gym?.days?.[wi]?.name || "—")}.
@@ -2332,8 +2382,8 @@ function buildTables() {
   const series = [["fecha", "lugar", "dia", "ejercicio", "serie", "kg", "reps", "reps_objetivo", "sensacion", "nota_ejercicio", "energia_sesion", "nota_sesion", "id_sesion"]];
   const cardio = [["fecha", "lugar", "dia", "ejercicio", "minutos", "detalle", "sensacion", "nota", "id_sesion"]];
   for (const l of logs) for (const e of l.entries || []) {
-    if (e.cardio) cardio.push([l.date, place(l.place), l.day, e.n, e.min, e.detail, e.feel, e.note, l.id]);
-    else (e.sets || []).forEach((s, i) => series.push([l.date, place(l.place), l.day, e.n, i + 1, s.kg, s.reps, s.tgt, e.feel, e.note, l.energy, l.note, l.id]));
+    if (e.cardio) cardio.push([l.date, place(l.place), dayLabel(l), exName(e), e.min, e.detail, e.feel, e.note, l.id]);
+    else (e.sets || []).forEach((s, i) => series.push([l.date, place(l.place), dayLabel(l), exName(e), i + 1, s.kg, s.reps, s.tgt, e.feel, e.note, l.energy, l.note, l.id]));
   }
   const body = [["fecha", "peso_kg", "grasa_pct", "musculo_kg", "imc", "fuente", "nota"], ...[...S.body].sort((a, b) => a.date.localeCompare(b.date)).map(b => [b.date, b.weight, b.fat, b.muscle, b.weight ? +bmi(b.weight).toFixed(1) : "", b.source, b.note])];
   const daily = [["fecha", "pasos", "kcal", "proteina_g", "grasa_g", "hidratos_g", "fuente"], ...[...S.daily].sort((a, b) => a.date.localeCompare(b.date)).map(d => [d.date, d.steps, d.kcal, d.protein, d.fat, d.carbs, d.source])];
@@ -2496,18 +2546,18 @@ async function restoreBackup(obj) {
 const num = v => { if (v === "" || v == null) return null; const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? null : n; };
 async function saveSession() {
   if (!S.db) return; const d = S.draft;
-  const entries = d.entries.map(e => e.cardio ? {n: e.n, cardio: true, min: num(e.min), detail: e.detail || "", feel: e.feel, note: e.note}
-    : {n: e.n, sets: e.sets.filter(s => s.kg != null || s.reps != null).map(s => ({kg: num(s.kg), reps: num(s.reps), tgt: s.tgt ?? null})), feel: e.feel, note: e.note})
+  const entries = d.entries.map(e => e.cardio ? {n: exName(e), id: e.id || null, cardio: true, min: num(e.min), detail: e.detail || "", feel: e.feel, note: e.note}
+    : {n: exName(e), id: e.id || null, sets: e.sets.filter(s => s.kg != null || s.reps != null).map(s => ({kg: num(s.kg), reps: num(s.reps), tgt: s.tgt ?? null})), feel: e.feel, note: e.note})
     .filter(e => e.cardio ? e.min || e.feel || e.note : e.sets.length);
   if (!entries.length) { toast("Apunta al menos un ejercicio antes de guardar."); return; }
   const btn = document.querySelector('[data-act="saveSession"]'); btn && (btn.disabled = true);
   try {
     const mb = mobBlockFor(d.place, S.plans[d.place]?.days?.findIndex(x => x.name === d.day)), mob = {};
     if (mb) for (const [k] of MOB_KINDS) { const it = mobItems(mb, k, d.place); if (it.length) mob[k] = it.map(x => ({n: x.n, done: !!d.mob?.[k]?.[x.n]})); }
-    await S.db.collection("logs").add({date: d.date || todayISO(), place: d.place, day: d.day, entries, energy: d.energy, note: d.note || "", ...mob, createdAt: Date.now()});
+    await S.db.collection("logs").add({date: d.date || todayISO(), place: d.place, day: S.plans[d.place]?.days?.find(x => x.id && x.id === d.dayId)?.name || d.day, dayId: d.dayId || S.plans[d.place]?.days?.find(x => x.name === d.day)?.id || null, entries, energy: d.energy, note: d.note || "", ...mob, createdAt: Date.now()});
     // actualizar "último peso" y sugerencia de progresión en el plan
-    const plan = JSON.parse(JSON.stringify(S.plans[d.place])); const day = plan.days.find(x => x.name === d.day);
-    if (day) for (const e of entries) { if (e.cardio) continue; const x = day.ex.find(x => x.n === e.n); if (!x) continue;
+    const plan = JSON.parse(JSON.stringify(S.plans[d.place])); const day = plan.days.find(x => x.id && x.id === d.dayId) || plan.days.find(x => x.name === d.day);
+    if (day) for (const e of entries) { if (e.cardio) continue; const x = day.ex.find(x => sameEx(e, x)); if (!x) continue;
       const kgs = [...new Set(e.sets.map(s => s.kg).filter(k => k != null))];
       if (kgs.length) { const u = unitOf(x.last); x.last = kgs.map(k => fmtN(k)).join(" / ") + "kg" + (u === "kg" ? "" : u.replace("kg", "")); }
       const hit = e.sets.length && e.sets.every(s => s.reps != null && s.tgt != null && s.reps >= s.tgt);
@@ -2517,7 +2567,7 @@ async function saveSession() {
     S.draft = null; S.dayIdx = null; toast("Sesión guardada"); if (backupOn()) { clearTimeout(abTimer); setTimeout(() => runBackup(false), 1500); } S.tab = "prog"; lsSet("rc.tab", S.tab); render(); scrollTo(0, 0);
   } catch (e) { btn && (btn.disabled = false); toast(e?.code === "quota_exceeded" ? "No queda espacio para más sesiones." : "No se pudo guardar. Revisa la conexión e inténtalo de nuevo."); }
 }
-async function savePlan(place, plan) { try { await S.db.doc("plan/" + place).set(plan); toast("Rutina actualizada"); } catch { toast("No se pudo guardar el cambio."); } }
+async function savePlan(place, plan) { ensureIds(plan); try { await S.db.doc("plan/" + place).set(plan); toast("Rutina actualizada"); } catch { toast("No se pudo guardar el cambio."); } }
 async function saveProfile(p) { try { await S.db.doc("profile/main").set(p); } catch { toast("No se pudo guardar."); } }
 
 document.addEventListener("click", async ev => {
@@ -2565,7 +2615,15 @@ document.addEventListener("click", async ev => {
   if (ds.saveex || ds.delex) {
     const [di, xi] = (ds.saveex || ds.delex).split("-").map(Number); const plan = JSON.parse(JSON.stringify(S.plans[S.rPlace]));
     if (ds.delex) plan.days[di].ex.splice(xi, 1);
-    else plan.days[di].ex[xi] = {...plan.days[di].ex[xi], n: $("#e-n").value.trim(), t: $("#e-t").value.trim(), last: $("#e-l").value.trim(), note: $("#e-no").value.trim(), tip: $("#e-tip").value.trim(), prog: $("#e-p").value};
+    else {
+      const old = plan.days[di].ex[xi], nn = $("#e-n").value.trim() || old.n, renamed = nn !== old.n;
+      const isNew = renamed && document.querySelector('input[name="e-same"]:checked')?.value === "new";
+      // vídeos: si es el mismo ejercicio, pasan al nombre nuevo
+      if (renamed && !isNew) { const ok = vkey(S.rPlace, old.n), nk = vkey(S.rPlace, nn); if (S.videos[ok] && !S.videos[nk]) { try { await S.db.doc("videos/" + nk).set(S.videos[ok]); await S.db.doc("videos/" + ok).delete(); } catch {} } }
+      plan.days[di].ex[xi] = {...old, id: isNew ? newId("x") : old.id, ...(isNew ? {last: "—", prog: "Mantener"} : {})};
+    }
+    if (!ds.delex) { const cur = plan.days[di].ex[xi], fresh = cur.last === "—" && cur.prog === "Mantener" && cur.id !== S.plans[S.rPlace].days[di].ex[xi]?.id;
+      plan.days[di].ex[xi] = {...cur, n: $("#e-n").value.trim() || cur.n, t: $("#e-t").value.trim(), last: fresh ? "—" : $("#e-l").value.trim(), note: $("#e-no").value.trim(), tip: $("#e-tip").value.trim(), prog: fresh ? "Mantener" : $("#e-p").value}; }
     S.editing = null; await savePlan(S.rPlace, plan); return;
   }
   if (ds.editday != null) { S.editDay = +ds.editday; render(); return; }
@@ -2777,13 +2835,13 @@ if (!HOSTED && "serviceWorker" in navigator && location.protocol === "https:") a
   db.doc("calendar/gcal").onSnapshot(s => { S.gcalMap = s.exists ? (s.data().days || {}) : {}; soon(); }, err);
   db.doc("calendar/overrides").onSnapshot(s => { S.calOv = s.exists ? (s.data().days || {}) : {}; autoPlace(); soon(); }, err);
   db.collection("daily").orderBy("date", "desc").limit(400).onSnapshot(s => { S.daily = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); dataTick(); }, err);
-  db.collection("plan").onSnapshot(s => { S.plans = {}; s.docs.forEach(d => S.plans[d.id] = d.data()); soon(); dataTick(); }, err);
+  db.collection("plan").onSnapshot(s => { S.plans = {}; s.docs.forEach(d => S.plans[d.id] = d.data()); buildExNames(); S.plansLoaded = true; soon(); dataTick(); maybeMigrateIds(); }, err);
   db.doc("profile/main").onSnapshot(s => { S.profile = s.exists ? s.data() : null; S.profileLoaded = true; soon(); if (S.tab === "evolt") evAuto(); }, err);
   db.doc("backup/auto").onSnapshot(s => { S.backup = s.exists ? s.data() : null; if (S.tab === "me") soon(); }, err);
   db.doc("mobility/main").onSnapshot(s => { S.mobility = s.exists ? s.data() : null; soon(); dataTick(); }, err);
   db.collection("evolt").onSnapshot(s => { S.evolt = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); dataTick(); }, err);
   db.collection("body").onSnapshot(s => { S.body = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); dataTick(); }, err);
-  db.collection("logs").orderBy("createdAt", "desc").limit(400).onSnapshot(s => { S.logs = s.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt); soon(); dataTick(); }, err);
+  db.collection("logs").orderBy("createdAt", "desc").limit(400).onSnapshot(s => { S.logs = s.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.createdAt - a.createdAt); S.logsLoaded = true; soon(); dataTick(); maybeMigrateIds(); }, err);
   setTimeout(() => { abReady = true; scheduleBackup(500); }, 8000);
   db.doc("chat/main").get().then(s => { if (s.exists && !S.chat.length) { S.chat = (s.data().turns || []).slice(); soon(); } }).catch(() => {});
   render();

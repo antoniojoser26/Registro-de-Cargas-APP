@@ -46,6 +46,15 @@ Más detalles:
 - **Renombrar** cambia el nombre de un día. **Quitar día** lo elimina junto con sus ejercicios; las sesiones ya guardadas no se borran.
 - **Cuidado al renombrar un ejercicio.** El nombre es lo que une el ejercicio con su historial, sus gráficas y sus vídeos. Si lo cambias, las sesiones antiguas siguen con el nombre viejo.
 
+### Cambiar el nombre de un ejercicio
+
+Cada ejercicio y cada día tienen un código interno fijo; el nombre es solo una etiqueta. Al editar un ejercicio en **Rutinas** y cambiarle el nombre, elige:
+
+- **Es el mismo ejercicio con otro nombre**: conserva su historial, sus vídeos y sus gráficas.
+- **Es otro ejercicio distinto**: empieza de cero (sin «Antes» ni peso de referencia).
+
+Los días también se pueden renombrar sin perder «La última vez». Gimnasio y casa tienen ejercicios separados aunque se llamen igual.
+
 ### Calentamiento y estiramientos
 
 Al final de **Rutinas** puedes crear bloques (por ejemplo «Torso» y «Pierna») con su calentamiento y sus estiramientos, cada uno con su cantidad (12 reps, 30 s por lado…), y elegir en qué días de gimnasio y de casa se hacen. Pulsa **Editar** para añadir, quitar o cambiar ejercicios. En **Hoy** aparecen como listas para marcar: el calentamiento antes de los ejercicios y los estiramientos al final. Al guardar la sesión queda registrado cuántos hiciste y el entrenador lo tiene en cuenta.
