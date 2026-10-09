@@ -494,7 +494,7 @@ nav.tabs button{font-size:10px;letter-spacing:-.02em}
 .hrseg{margin-top:6px;padding-left:10px;border-left:4px solid var(--kc);font-size:14px}.hrseg .eyebrow{margin-right:6px}.hrseg small{color:var(--muted)}
 .hrzones{display:flex;height:22px;border-radius:8px;overflow:hidden;margin-top:10px;font-size:10.5px;font-weight:700;color:#fff}
 .hrzones span{display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden;min-width:0}
-.hrzones .z1{background:#9AA5B8}.hrzones .z2{background:var(--plate-blue)}.hrzones .z3{background:var(--plate-green)}.hrzones .z4{background:var(--plate-yellow)}.hrzones .z5{background:var(--plate-red)}
+.hrzones .z0{background:#C9CED6;color:#3B4252}.hrzones .z1{background:#9AA5B8}.hrzones .z2{background:var(--plate-blue)}.hrzones .z3{background:var(--plate-green)}.hrzones .z4{background:var(--plate-yellow)}.hrzones .z5{background:var(--plate-red)}
 .hrphotos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .hrph{all:unset;cursor:pointer;display:block;width:84px;height:84px;border-radius:12px;overflow:hidden;background:var(--surface)}
 .hrph img{width:100%;height:100%;object-fit:cover;display:block}.hrph.big{width:100%;height:auto}.hrph.big img{height:auto;object-fit:contain}
@@ -1942,8 +1942,7 @@ function mzClass(r, g, b) {
   const mx = Math.max(r, g, b), mn = Math.min(r, g, b), v = mx / 255, sat = mx ? (mx - mn) / mx : 0;
   let h = 0; if (mx !== mn) { h = mx === r ? ((g - b) / (mx - mn)) % 6 : mx === g ? (b - r) / (mx - mn) + 2 : (r - g) / (mx - mn) + 4; h *= 60; if (h < 0) h += 360; }
   if (v < 0.12) return "k";
-  if (h >= 180 && h <= 230 && v < 0.42 && sat > 0.6) return "bg";
-  if (sat < 0.2) return v > 0.72 ? 0 : v > 0.3 ? 1 : "d";
+  if (sat < 0.2) return v > 0.62 ? 0 : v > 0.3 ? 1 : "d";
   if (h >= 190 && h <= 235) return 2;
   if (h >= 95 && h <= 175) return 3;
   if (h >= 35 && h <= 70) return 4;
@@ -1953,13 +1952,19 @@ function mzClass(r, g, b) {
 async function mzReadChart(blob) {
   const img = await createImageBitmap(blob), k = Math.min(1, 1200 / img.width), W = Math.round(img.width * k), H = Math.round(img.height * k);
   const c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d", {willReadFrequently: true}); g.drawImage(img, 0, 0, W, H);
-  const d = g.getImageData(0, 0, W, H).data, at = (x, y) => { const i = (y * W + x) * 4; return mzClass(d[i], d[i + 1], d[i + 2]); };
-  let top = -1;
-  for (let y = 0; y < H && top < 0; y++) { let n = 0; for (let x = 0; x < W; x += 4) if (at(x, y) === "bg") n++; if (n > 0.4 * W / 4) top = y; }
-  if (top < 0) return null;
+  const d = g.getImageData(0, 0, W, H).data, P = (x, y) => (y * W + x) * 4;
+  const blk = (x, y) => { const i = P(x, y); return Math.max(d[i], d[i + 1], d[i + 2]) < 31; };
+  // La gráfica es el bloque de abajo: se sube desde el borde inferior mientras la fila no sea casi toda negra.
+  // (El fondo de la gráfica cambia de color según el entreno: azul marino, gris oscuro…)
+  let y0 = H - 1; for (; y0 > 0; y0--) { let n = 0, t = 0; for (let x = 0; x < W; x += 3) { t++; if (blk(x, y0)) n++; } if (n > 0.3 * t) break; }
+  const top = y0 + 1; if (H - top < 40) return null;
+  const cnt0 = {}; for (let y = top; y < Math.min(H, top + 6); y++) for (let x = 0; x < W; x += 2) { const i = P(x, y), k = (d[i] >> 3) + "," + (d[i + 1] >> 3) + "," + (d[i + 2] >> 3); cnt0[k] = (cnt0[k] || 0) + 1; }
+  const bg = Object.keys(cnt0).sort((a, b) => cnt0[b] - cnt0[a])[0].split(",").map(v => v * 8 + 4);
+  const isBg = (x, y) => { const i = P(x, y); return Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]) < 36; };
+  const at = (x, y) => { if (blk(x, y)) return "k"; if (isBg(x, y)) return "bg"; const i = P(x, y); return mzClass(d[i], d[i + 1], d[i + 2]); };
   const cols = [];
   for (let x = 0; x < W; x++) {
-    let y = top; while (y < H && at(x, y) === "bg") y++;
+    let y = top; while (y < H && (at(x, y) === "bg" || at(x, y) === "k")) y++;
     let yb = H - 1; while (yb > y && (at(x, yb) === "k" || at(x, yb) === "bg")) yb--;
     if (y >= H || yb - y < 5) continue;
     const cnt = {}; for (let yy = y + 3; yy < Math.min(yb, y + 200); yy += 2) { const z = at(x, yy); if (typeof z === "number") cnt[z] = (cnt[z] || 0) + 1; }
@@ -1972,7 +1977,7 @@ async function mzReadChart(blob) {
   const beta = cols.reduce((a, c) => a + (c.h - mx) * (MZ_LO[c.z] + 5 - my), 0) / sxx, alpha = my - beta * mx;
   cols.forEach(c => c.e = Math.min(Math.max(alpha + beta * c.h, MZ_LO[c.z]), MZ_LO[c.z] + 9.9));
   const zt = {}; cols.forEach(c => zt[c.z] = (zt[c.z] || 0) + 1);
-  return {W, cols, beta, zones: Object.fromEntries([1, 2, 3, 4, 5].map(z => [`z${z}`, Math.round((zt[z] || 0) / n * 100)])), below: Math.round((zt[0] || 0) / n * 100),
+  return {W, cols, beta, topFrac: top / H, zones: Object.fromEntries([1, 2, 3, 4, 5].map(z => [`z${z}`, Math.round((zt[z] || 0) / n * 100)])), below: Math.round((zt[0] || 0) / n * 100),
     mean: Math.round(cols.reduce((a, c) => a + c.e, 0) / n), max: Math.round(Math.max(...cols.map(c => c.e)))};
 }
 /* Agrupa las columnas en puntos (uno por minuto si se conoce la duración; si no, 100 tramos). */
@@ -1985,7 +1990,7 @@ function mzSeries(ch, durMin) {
 }
 /* Números del resumen de MyZone en el texto leído: MEPs, esfuerzo %, duración y kcal. */
 function mzSummary(t) {
-  t = String(t || "").replace(/[Oo](?=\d)|(?<=\d)[Oo]/g, "0"); const out = {}; let m;
+  t = String(t || "").replace(/[Oo](?=\d)|(?<=\d)[Oo]/g, "0").replace(/[Ss](?=\d\s*%)/g, "5").replace(/(\d)[>»'’]+(\d)/g, "$1$2"); const out = {}; let m;
   if ((m = t.match(/(\d{2,4})\s+(\d{1,3})\s*%/))) { out.meps = +m[1]; out.effort = +m[2]; } else if ((m = t.match(/(\d{1,3})\s*%/))) out.effort = +m[1];
   if ((m = t.match(/(\d{1,2})\s*h\s*(\d{1,2})\s*m/i))) out.dur = +m[1] * 60 + +m[2]; else if ((m = t.match(/(\d{1,3})\s*m(?:in)?\b/i))) out.dur = +m[1];
   if ((m = t.match(/\d\s*h\s*\d{1,2}\s*m\w*\s+(\d[\d .]{1,6}\d)/i)) || (m = t.match(/\d{1,3}\s*m(?:in)?\s+(\d[\d .]{1,6}\d)/i))) { const k = +m[1].replace(/[ .]/g, ""); if (k > 30 && k < 6000) out.kcal = k; }
@@ -2008,7 +2013,7 @@ function hrBlock(l) {
   if (!h) return `<div style="margin-top:8px"><button class="btn" data-hredit="${l.id}">♥ Añadir pulso del reloj</button></div>`;
   const [il, ic] = HR_LBL[h.intensity] || [h.intensity || "—", "keep"];
   const seg = (lbl, o, c) => o && (o.avg || o.max) ? `<div class="hrseg" style="--kc:${c}"><span class="eyebrow">${lbl}</span><b class="num">${o.avg ?? "–"}</b><small> media</small> · <b class="num">${o.max ?? "–"}</b><small> máx</small>${o.min != null && o.min !== "" ? ` · <span class="small muted">${o.min} min</span>` : ""}</div>` : "";
-  const zones = h.zones && Object.values(h.zones).some(v => +v > 0) ? `<div class="hrzones" aria-label="Tiempo en zonas">${[1, 2, 3, 4, 5].map(z => { const v = +h.zones["z" + z] || 0; return v ? `<span class="z${z}" style="flex:${v}" title="Zona ${z}: ${v} %">Z${z} ${Math.round(v)}%</span>` : ""; }).join("")}</div>` : "";
+  const zones = h.zones && Object.values(h.zones).some(v => +v > 0) ? `<div class="hrzones" aria-label="Tiempo en zonas">${[0, 1, 2, 3, 4, 5].map(z => { const v = +h.zones["z" + z] || 0; return v ? `<span class="z${z}" style="flex:${v}" title="${z ? "Zona " + z : "Por debajo del 50 %"}: ${v} %">${z ? "Z" + z : "&lt;50"} ${Math.round(v)}%</span>` : ""; }).join("")}</div>` : "";
   return `<div class="hrbox"><div class="row between"><div class="eyebrow">♥ Pulso</div><span class="pill ${ic}">Intensidad ${il.toLowerCase()}${h.score ? " · " + h.score + "/10" : ""}</span></div>
     <div class="hrnums"><span><b class="num">${h.avg ?? "–"}</b><small>${h.avgEst ? "≈ " : ""}ppm media</small></span><span><b class="num">${h.max ?? "–"}</b><small>${h.maxEst ? "≈ " : ""}ppm máx</small></span>${h.dur ? `<span><b class="num">${h.dur}</b><small>min</small></span>` : ""}${h.kcal ? `<span><b class="num">${h.kcal}</b><small>kcal</small></span>` : ""}${h.meps ? `<span><b class="num">${h.meps}</b><small>MEPs</small></span>` : ""}${h.effort ? `<span><b class="num">${h.effort}%</b><small>esfuerzo${h.effortMax ? " · máx " + h.effortMax + "%" : ""}</small></span>` : ""}</div>
     ${h.series ? `<div style="margin-top:8px">${mzChartSvg(h.series)}</div>` : ""}${seg("Pesas", h.weights, "var(--plate-blue)")}${seg("Cardio", h.cardio, "var(--plate-red)")}${zones}
@@ -2066,7 +2071,9 @@ async function hrSave(id) {
     if (imgs.length) {
       S.hrBusy = "Leyendo la gráfica…"; render();
       for (const b of imgs) { try { chart = chart || await mzReadChart(b); } catch {} }
-      if (HOSTED) { try { S.hrBusy = "Leyendo los números…"; render(); const w = await ocrWorker(); ocrTxt = ""; for (const b of imgs) { const {data} = await w.recognize(await ocrImage(b)); ocrTxt += (data.text || "") + "\n---\n"; } sum = mzSummary(ocrTxt); } catch { ocrTxt = null; } }
+      if (HOSTED) { try { S.hrBusy = "Leyendo los números…"; render(); const w = await ocrWorker(); ocrTxt = "";
+        for (const b of imgs) { const keep = chart?.topFrac && chart.topFrac > 0.3 ? chart.topFrac : 1; const {data} = await w.recognize(await ocrImage(b, keep)); ocrTxt += (data.text || "") + "\n---\n"; }
+        sum = mzSummary(ocrTxt); } catch { ocrTxt = null; } }
     }
     const durMin = manual.dur ?? sum.dur ?? (l.hr?.dur || null);
     const series = chart ? mzSeries(chart, durMin) : (fresh ? null : l.hr?.series || null);
@@ -2090,7 +2097,7 @@ async function hrSave(id) {
     const hr = {photos, note, source, at: new Date().toISOString(), driveIds, manual,
       meps: manual.meps ?? sum.meps ?? intN(ai?.meps), effort: manual.effort ?? sum.effort ?? intN(ai?.effort) ?? chart?.mean ?? null, series: series || null, effortMax: chart?.max ?? l.hr?.effortMax ?? null,
       avg: manual.avg ?? intN(ai?.avg), max: manual.max ?? intN(ai?.max), min: intN(ai?.min), dur: durMin ?? intN(ai?.dur), kcal: manual.kcal ?? sum.kcal ?? intN(ai?.kcal),
-      zones: chart ? chart.zones : ai?.zones && typeof ai.zones === "object" ? Object.fromEntries([1, 2, 3, 4, 5].map(z => [`z${z}`, intN(ai.zones["z" + z]) ?? 0])) : null,
+      zones: chart ? {...chart.zones, z0: chart.below || 0} : ai?.zones && typeof ai.zones === "object" ? Object.fromEntries([1, 2, 3, 4, 5].map(z => [`z${z}`, intN(ai.zones["z" + z]) ?? 0])) : null,
       weights: segN(ai?.weights), cardio: segN(ai?.cardio), score: intN(ai?.score), summary: typeof ai?.summary === "string" ? ai.summary.slice(0, 800) : ""};
     // Calibración: si das el pulso medio de MyZone y se conoce el esfuerzo medio, se ajusta tu pulso máximo
     if (manual.avg && hr.effort && !S.profile?.hrMaxLocked) { const m = Math.round(manual.avg * 100 / hr.effort); if (m > 150 && m < 235 && m !== +S.profile?.hrMax) { await saveProfile({...S.profile, hrMax: m, hrMaxFrom: {date: l.date, avg: manual.avg, effort: hr.effort}}); toast(`Pulso máximo ajustado a ${m} ppm`); } }
@@ -2200,10 +2207,15 @@ function ocrWorker() {
   return tessP;
 }
 /* Prepara la captura: escala de grises y tamaño razonable, mejora la lectura de números. */
-async function ocrImage(file) {
-  const img = await createImageBitmap(file), k = Math.min(1, 2000 / Math.max(img.width, img.height));
-  const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-  const g = c.getContext("2d"); g.filter = "grayscale(1) contrast(1.2)"; g.drawImage(img, 0, 0, c.width, c.height); return c;
+/* Prepara la imagen para leer texto: escala de grises, ampliada si es pequeña y, si es oscura (modo oscuro), invertida.
+   keepTop (0-1) recorta la parte de abajo (la gráfica) para leer solo el resumen. */
+async function ocrImage(file, keepTop) {
+  const img = await createImageBitmap(file), sh = Math.round(img.height * (keepTop || 1));
+  const k = Math.min(2, Math.max(1, 1500 / img.width), 2400 / Math.max(img.width, sh));
+  const probe = document.createElement("canvas"); probe.width = 40; probe.height = 40; const pg = probe.getContext("2d"); pg.drawImage(img, 0, 0, img.width, sh, 0, 0, 40, 40);
+  const pd = pg.getImageData(0, 0, 40, 40).data; let lum = 0; for (let i = 0; i < pd.length; i += 4) lum += (pd[i] + pd[i + 1] + pd[i + 2]) / 3; lum /= pd.length / 4;
+  const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(sh * k);
+  const g = c.getContext("2d"); g.filter = `grayscale(1)${lum < 110 ? " invert(1)" : ""} contrast(1.3)`; g.drawImage(img, 0, 0, img.width, sh, 0, 0, c.width, c.height); return c;
 }
 function startOcr(i) {
   const f = S.attach[i]; S.attachOcr[i] = {state: "reading", text: ""};
