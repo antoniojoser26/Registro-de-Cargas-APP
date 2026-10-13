@@ -613,7 +613,7 @@ const S = {
   db: null, sample: null, dbState: "loading", canWrite: true,
   plans: {}, profile: null, body: [], logs: [], chat: [],
   tab: lsGet("rc.tab") || "log",
-  place: "gym", dayIdx: null, date: todayISO(), draft: null,
+  place: "gym", dayIdx: null, date: todayISO(), today: todayISO(), draft: null,
   rPlace: "gym", editing: null,
   metric: "weight", source: "all", exSel: null, exMetric: "top",
   busy: false, ctl: null, confirmClear: false, confirmDel: null,
@@ -763,6 +763,8 @@ function ensureDraft() {
     const saved = lsGet("rc.draft");
     S.draft = sameDay(saved) ? saved : buildDraft();
   }
+  // La fecha de la sesión es la de hoy salvo que la hayas cambiado tú a mano
+  if (S.draft && !S.draft.dateTouched && S.draft.date !== S.date) { S.draft.date = S.date; saveDraftLocal(); }
 }
 const saveDraftLocal = () => lsSet("rc.draft", S.draft);
 
@@ -2642,7 +2644,7 @@ async function saveSession() {
   try {
     const mb = mobBlockFor(d.place, S.plans[d.place]?.days?.findIndex(x => x.name === d.day)), mob = {};
     if (mb) for (const [k] of MOB_KINDS) { const it = mobItems(mb, k, d.place); if (it.length) mob[k] = it.map(x => ({n: x.n, done: !!d.mob?.[k]?.[x.n]})); }
-    await S.db.collection("logs").add({date: d.date || todayISO(), place: d.place, day: S.plans[d.place]?.days?.find(x => x.id && x.id === d.dayId)?.name || d.day, dayId: d.dayId || S.plans[d.place]?.days?.find(x => x.name === d.day)?.id || null, entries, energy: d.energy, note: d.note || "", ...mob, createdAt: Date.now()});
+    await S.db.collection("logs").add({date: d.dateTouched && d.date ? d.date : todayISO(), place: d.place, day: S.plans[d.place]?.days?.find(x => x.id && x.id === d.dayId)?.name || d.day, dayId: d.dayId || S.plans[d.place]?.days?.find(x => x.name === d.day)?.id || null, entries, energy: d.energy, note: d.note || "", ...mob, createdAt: Date.now()});
     // actualizar "último peso" y sugerencia de progresión en el plan
     const plan = JSON.parse(JSON.stringify(S.plans[d.place])); const day = plan.days.find(x => x.id && x.id === d.dayId) || plan.days.find(x => x.name === d.day);
     if (day) for (const e of entries) { if (e.cardio) continue; const x = day.ex.find(x => sameEx(e, x)); if (!x) continue;
@@ -2894,7 +2896,7 @@ document.addEventListener("input", ev => {
   else if (ds.det != null) { S.draft.entries[+ds.det].detail = t.value; saveDraftLocal(); }
   else if (ds.enote != null) { S.draft.entries[+ds.enote].note = t.value; saveDraftLocal(); }
   else if (t.id === "snote") { S.draft.note = t.value; saveDraftLocal(); }
-  else if (t.id === "sdate") { S.draft.date = t.value; saveDraftLocal(); }
+  else if (t.id === "sdate") { S.draft.date = t.value; S.draft.dateTouched = t.value !== todayISO(); saveDraftLocal(); }
   else if (t.id === "ask") { S.askDraft = t.value; t.style.height = "auto"; t.style.height = Math.min(160, t.scrollHeight) + "px"; }
 });
 document.addEventListener("change", ev => { if (ev.target.dataset?.hrpick) { S.hrPick = S.hrPick || new Set(); ev.target.checked ? S.hrPick.add(ev.target.dataset.hrpick) : S.hrPick.delete(ev.target.dataset.hrpick); return; } if (ev.target.id === "hr-img") { S.hrNote = $("#hr-note")?.value ?? S.hrNote; (S.hrUrls || []).forEach(u => URL.revokeObjectURL(u)); S.hrFromDrive = null; S.hrFiles = [...ev.target.files].filter(f => /^image\//.test(f.type)).slice(0, 3); S.hrUrls = S.hrFiles.map(f => URL.createObjectURL(f)); render(); return; } if (ev.target.id === "gcalWrite") { S.gcalWrite = ev.target.checked; lsSet("rc.gcalWrite", S.gcalWrite); render(); return; } if (ev.target.dataset?.shpick) { S.shPick = S.shPick || new Set(); ev.target.checked ? S.shPick.add(ev.target.dataset.shpick) : S.shPick.delete(ev.target.dataset.shpick); return; } if (ev.target.id === "coachImg") { addAttach([...ev.target.files]); ev.target.value = ""; return; } if (ev.target.id === "exsel") { S.exSel = ev.target.value; render(); } });
@@ -2908,6 +2910,15 @@ document.addEventListener("keydown", ev => { if (ev.target.id === "ask" && ev.ke
 /* ---------- datos ---------- */
 let rTimer; const soon = () => { clearTimeout(rTimer); rTimer = setTimeout(() => { const a = document.activeElement; if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && (S.tab !== "prog" || S.hrEdit)) return; render(); }, 30); };
 render();
+function syncToday() {
+  const t = todayISO(); if (t === S.today) return;
+  const wasToday = S.date === S.today; S.today = t;
+  if (wasToday) { S.date = t; S.dayIdx = null; S.placeTouched = false; if (typeof autoPlace === "function") autoPlace(); }
+  if (S.draft && !S.draft.dateTouched) S.draft.date = S.date;
+  render();
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) syncToday(); });
+addEventListener("focus", syncToday); setInterval(syncToday, 60e3);
 /* Versión independiente instalada desde GitHub Pages: registra el service worker (instalable y sin conexión). */
 if (!HOSTED && "serviceWorker" in navigator && location.protocol === "https:") addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 (async () => {
