@@ -2545,13 +2545,33 @@ async function driveGranted() {
 const backupOn = () => HOSTED && !!S.mcp && !!S.profile?.drive?.exports?.id && S.backup?.enabled !== false;
 function dataTick() { if (abReady) scheduleBackup(6000); }
 function scheduleBackup(ms) { if (!backupOn()) return; clearTimeout(abTimer); abTimer = setTimeout(async () => { if (await driveGranted()) runBackup(false); }, ms); }
+const AB_ME = Math.random().toString(36).slice(2, 10), AB_WEEKS = 8;
+/* Limpieza de la carpeta: deja solo la copia actual (Excel + copia completa) y las copias semanales de las últimas
+   AB_WEEKS semanas; el resto va a la papelera de Drive (se puede recuperar durante 30 días). Así no se acumulan
+   copias aunque falle un borrado o se abra la app en dos dispositivos a la vez. */
+async function abCleanup(call, folderId, keepIds) {
+  try {
+    let files = [], token = null;
+    for (let i = 0; i < 4; i++) { const r = await call("search_files", {query: `parentId = '${folderId}'`, pageSize: 100, excludeContentSnippets: true, ...(token ? {pageToken: token} : {})}); files.push(...(r.files || [])); token = r.nextPageToken; if (!token || !(r.files || []).length) break; }
+    const keep = new Set(keepIds.filter(Boolean)), del = [];
+    for (const f of files) { const t = String(f.title || ""); if (!keep.has(String(f.id)) && (t === "Registro de Cargas.xlsx" || t === "copia_completa.json")) del.push(f); }
+    for (const base of ["Registro de Cargas (semana del", "copia_completa (semana del"]) {
+      const weekly = files.filter(f => String(f.title || "").startsWith(base)).sort((a, b) => String(b.createdTime || "").localeCompare(String(a.createdTime || "")));
+      del.push(...weekly.slice(AB_WEEKS));
+    }
+    for (const f of del) { try { await call("trash_file", {fileId: String(f.id)}); } catch {} }
+  } catch {}
+}
 async function runBackup(force) {
   if (!backupOn() && !force) return;
   if (abBusy) { abAgain = true; return; }
   const hash = dataHash(); if (!force && hash === S.backup?.hash) return;
+  // Si otro dispositivo (móvil u ordenador) está haciendo la copia ahora mismo, espera y reintenta
+  const lk = S.backup?.lock; if (lk && lk.by !== AB_ME && Date.now() - lk.at < 120e3) { clearTimeout(abTimer); abTimer = setTimeout(() => runBackup(force), 60e3); return; }
   abBusy = true; S.abMsg = "Guardando copia en Drive…"; if (S.tab === "me") render();
   const call = (tool, input) => S.mcp.callTool("Google Drive", tool, input, {cache: false}).then(r => r.payload || {});
-  const old = S.backup || {}, wk = weekStart(todayISO());
+  const old = {...(S.backup || {})}, wk = weekStart(todayISO()); delete old.lock;
+  try { await S.db.doc("backup/auto").set({...old, lock: {by: AB_ME, at: Date.now()}}); } catch {}
   try {
     let folderId = old.folderId, folderUrl = old.folderUrl || "";
     if (!folderId) { const f = await call("create_file", {title: "Copia automática", contentMimeType: "application/vnd.google-apps.folder", parentId: S.profile.drive.exports.id}); if (!f.id) throw {code: "tool_error", message: "sin carpeta"}; folderId = String(f.id); folderUrl = String(f.viewUrl || ""); }
@@ -2564,6 +2584,7 @@ async function runBackup(force) {
       if (!id) continue;
       try { keep ? await call("update_file", {fileId: id, title: base + tag + ext}) : await call("trash_file", {fileId: id}); } catch {}
     }
+    await abCleanup(call, folderId, [String(x.id), j.id ? String(j.id) : ""]);
     await S.db.doc("backup/auto").set({enabled: true, folderId, folderUrl, xlsxId: String(x.id), jsonId: j.id ? String(j.id) : null, url: String(x.viewUrl || ""), at: new Date().toISOString(), hash, week: wk, err: null});
     S.abMsg = "";
   } catch (e) {
@@ -2580,7 +2601,7 @@ function autoBackupPanel() {
   return `<div class="panel stack" style="margin-top:10px">
     <div class="row between"><div><b>Copia automática en Drive</b> <span class="pill ${on && can ? "good" : "keep"}">${on && can ? "Activada" : "Desactivada"}</span></div>
       ${can ? `<button class="chip" data-act="abToggle">${on ? "Desactivar" : "Activar"}</button>` : ""}</div>
-    <p class="small">Cada vez que guardas una sesión, una medición, un escaneo EVOLT, tu comida o cambias las rutinas, la app actualiza sola un Excel en <b>Exportaciones → Copia automática</b> con una hoja por tema (series con kg y repeticiones, cardio, calentamiento, composición, nutrición, EVOLT y rutinas) y una copia completa para restaurar. La primera copia de cada semana se guarda con su fecha como histórico.</p>
+    <p class="small">Cada vez que guardas una sesión, una medición, un escaneo EVOLT, tu comida o cambias las rutinas, la app actualiza sola un Excel en <b>Exportaciones → Copia automática</b> con una hoja por tema (series con kg y repeticiones, cardio, calentamiento, composición, nutrición, EVOLT y rutinas) y una copia completa para restaurar. Además se guarda una copia por semana con su fecha (las de las últimas 8 semanas); lo demás va solo a la papelera de Drive.</p>
     ${when ? `<p class="small muted">Última copia: ${when}${b.url ? ` · <a href="${esc(b.url)}" target="_blank" rel="noopener">abrir Excel ↗</a>` : ""}${b.folderUrl ? ` · <a href="${esc(b.folderUrl)}" target="_blank" rel="noopener">carpeta ↗</a>` : ""}</p>` : `<p class="small muted">Aún no se ha hecho ninguna copia automática.</p>`}
     ${b.err && !abBusy ? `<p class="small" style="color:var(--plate-red)">${esc(b.err)}</p>` : ""}
     ${can ? `<div class="row"><button class="btn" data-act="abNow" ${abBusy ? "disabled" : ""}>${abBusy ? "Guardando…" : "Hacer copia ahora"}</button></div>` : `<p class="small muted">Solo funciona al abrir la app dentro de Claude con Google Drive conectado.</p>`}
