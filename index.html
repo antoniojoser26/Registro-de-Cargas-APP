@@ -560,6 +560,8 @@ nav.tabs{padding:6px 2px}nav.tabs button{padding:6px 0;letter-spacing:-.02em;fon
 .vex,.vex:first-of-type{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.8);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;
   box-shadow:0 8px 28px rgba(30,40,90,.08),inset 0 1px 0 rgba(255,255,255,.9);-webkit-backdrop-filter:blur(18px) saturate(1.6);backdrop-filter:blur(18px) saturate(1.6)}
 .vitem{background:rgba(238,241,248,.85);border-radius:12px}
+
+.weighrow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--plate-red) 9%,rgba(255,255,255,.6))}
 </style>
 
 </head>
@@ -620,7 +622,7 @@ const S = {
   mcp: null, assets: null, videos: {}, vPlace: "gym", vAdd: null, vMode: "drive", driveFiles: null, driveState: "idle", driveErr: "", uploading: false,
   daily: [], nutMetric: "kcal", importing: "",
   editMe: false, editMacros: false, confirmImport: false, pendingImport: null, profileLoaded: false, editDay: null, editGoals: false, gcalWrite: lsGet("rc.gcalWrite") !== false, gcalMap: {}, showIdeas: false, attach: [], attachUrls: [], attachOcr: [], imgCaps: null, exporting: "", exportBusy: false,
-  exNames: {}, plansLoaded: false, logsLoaded: false, backup: null, abMsg: "", hrEdit: null, hrOpen: null, hrFiles: [], hrUrls: [], hrNote: null, hrBusy: "", hrZoom: null, hrDrive: null, hrPick: null, hrFromDrive: null, mobility: null, mobEdit: null, mobDraft: null, mobOpen: null, evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
+  exNames: {}, plansLoaded: false, logsLoaded: false, weighs: {}, backup: null, abMsg: "", hrEdit: null, hrOpen: null, hrFiles: [], hrUrls: [], hrNote: null, hrBusy: "", hrZoom: null, hrDrive: null, hrPick: null, hrFromDrive: null, mobility: null, mobEdit: null, mobDraft: null, mobOpen: null, evolt: [], evSel: null, evDrive: null, evBusy: false, evMsg: "", evOpen: false,
   apiKey: lsGet("rc.apikey") || "", apiModel: lsGet("rc.model") || ""
 };
 
@@ -1255,8 +1257,9 @@ const shiftCfg = () => S.profile?.shifts || {list: [], teleDefault: ""};
 const shiftDef = code => (shiftCfg().list || []).find(s => s.code === code) || null;
 const shiftHours = code => { const d = shiftDef(code); return d && d.start && d.end ? `${d.start}–${d.end}` : ""; };
 function workDay(iso) {
-  const auto = S.cal?.days?.[iso] || null, ov = S.calOv?.[iso];
-  const w = ov ? {titles: [], ...(auto || {}), ...ov, manual: true} : auto ? {...auto} : null;
+  const auto = S.cal?.days?.[iso] || null, ov = S.calOv?.[iso], wg = S.weighs?.[iso];
+  let w = ov ? {titles: [], ...(auto || {}), ...ov, manual: true} : auto ? {...auto} : null;
+  if (wg) { w = w || {titles: []}; w.weigh = true; w.weighTime = wg.time || "08:00"; w.weighManual = true; }
   if (!w) return null;
   if (w.tele && !w.code && !w.off) { const d = shiftCfg().teleDefault; if (d && (!w.shift || w.shift === d[0])) { w.code = d; w.shift = d[0]; w.defaulted = true; } }
   return w.shift || w.tele || w.off || w.weigh ? w : null;
@@ -1271,7 +1274,7 @@ function workLabel(w, short) {
     else if (kind) parts.push("Turno de " + kind);
     if (w.tele) parts.push("Teletrabajo"); else if (w.shift) parts.push("Presencial");
   }
-  if (w.weigh) parts.push("Pesaje");
+  if (w.weigh) parts.push("Pesaje" + (w.weighTime ? " " + w.weighTime : ""));
   return parts.join(" · ");
 }
 const placeFor = iso => workDay(iso)?.tele ? "home" : "gym";
@@ -1321,8 +1324,29 @@ async function loadCalendars() {
   render();
 }
 function nextWeigh(fromIso) {
-  const days = Object.keys(S.cal?.days || {}).filter(d => d >= (fromIso || todayISO()) && S.cal.days[d].weigh).sort();
+  const f = fromIso || todayISO();
+  const days = [...Object.keys(S.cal?.days || {}).filter(d => S.cal.days[d].weigh), ...Object.keys(S.weighs || {})].filter(d => d >= f).sort();
   return days[0] || null;
+}
+/* Pesajes marcados en la app (calendar/weighs): {días: {AAAA-MM-DD: {time, eventId}}}. Por defecto a las 8:00.
+   Si «Añadir también a Google Calendar» está activo, se crea un evento «Pesaje EVOLT» de media hora. */
+const weighDefaultTime = () => S.profile?.weighTime || "08:00";
+async function saveWeigh(iso, on, time) {
+  const all = {...(S.weighs || {})}, prev = all[iso];
+  if (on) all[iso] = {time: time || weighDefaultTime(), eventId: prev?.eventId || null}; else delete all[iso];
+  if (S.mcp && S.gcalWrite) {
+    try {
+      if (prev?.eventId && (!on || prev.time !== all[iso]?.time)) { try { await S.mcp.callTool(CAL_SERVER, "delete_event", {calendarId: "primary", eventId: prev.eventId, notificationLevel: "NONE"}, {cache: false}); } catch (e) { if (e?.code !== "tool_error") throw e; } if (all[iso]) all[iso].eventId = null; }
+      if (on && !all[iso].eventId) {
+        const t = all[iso].time, [h, m] = t.split(":").map(Number), end = `${String(h + (m + 30 >= 60 ? 1 : 0)).padStart(2, "0")}:${String((m + 30) % 60).padStart(2, "0")}`;
+        const tr = (S.profile?.trainer || "").split(" (")[0];
+        const p = (await S.mcp.callTool(CAL_SERVER, "create_event", {calendarId: "primary", timeZone: TZ, notificationLevel: "NONE", useDefaultReminders: true, summary: "Pesaje EVOLT" + (tr ? " con " + tr : ""), description: "Creado desde App Registro de Cargas", startTime: `${iso}T${t}:00`, endTime: `${iso}T${end}:00`}, {cache: false})).payload || {};
+        all[iso].eventId = String(p.id || p.event?.id || p.eventId || "") || null;
+      }
+    } catch (e) { toast("Pesaje guardado en la app, pero no en Google Calendar: " + calErrMsg(e)); }
+  }
+  const min = isoAdd(todayISO(), -120); for (const d of Object.keys(all)) if (d < min) delete all[d];
+  await S.db.doc("calendar/weighs").set({days: all});
 }
 function viewCal() {
   const today = todayISO(); if (!S.calSel) S.calSel = today;
@@ -1363,6 +1387,9 @@ function viewCal() {
       ${w?.weigh ? `<br>Pesaje${S.profile?.trainer ? " con " + esc(S.profile.trainer) : ""}: apunta el resultado en <b>Progreso → Añadir medición</b>.` : ""}
       ${sess.length ? `<br>Registrado: ${sess.map(l => esc(l.day) + " (" + (l.place === "home" ? "casa" : "gimnasio") + ")").join(", ")}.` : ""}
       ${meas.length ? `<br>Medición: ${meas.map(b => fmtN(b.weight) + " kg · " + fmtN(b.fat) + " % grasa").join(", ")}.` : ""}</div>
+    <div class="weighrow"><label class="row" style="gap:8px;font-weight:600"><input type="checkbox" id="cal-wg" ${S.weighs?.[iso] || w?.weigh ? "checked" : ""}> Pesaje este día</label>
+      <label class="row small" style="gap:6px">a las <input class="input" type="time" id="cal-wt" value="${esc(S.weighs?.[iso]?.time || w?.weighTime || weighDefaultTime())}" style="width:110px"></label>
+      ${w?.weigh && !S.weighs?.[iso] ? '<span class="small muted">(viene de Google Calendar)</span>' : ""}</div>
     <div class="grid2"><div class="field"><label for="cal-ov">Corregir este día</label><select class="input" id="cal-ov">${ovOptions().map(([k, l]) => `<option value="${esc(k)}" ${ovKey(S.calOv?.[iso]) === k ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div></div>
     ${S.mcp ? `<label class="row small" style="gap:8px"><input type="checkbox" id="gcalWrite" ${S.gcalWrite ? "checked" : ""}> Añadir también a Google Calendar${S.gcalMap?.[iso] ? ' <span class="pill good">ya añadido</span>' : ""}</label>` : ""}
     <div class="row"><button class="btn primary" data-act="calSaveDay" ${S.calBusy ? "disabled" : ""}>Guardar día</button><button class="btn" data-act="calSaveWeek" ${S.calBusy ? "disabled" : ""}>Aplicar de lunes a viernes</button></div>
@@ -2619,13 +2646,14 @@ function backupData() {
   S.daily.forEach(d => docs["daily/" + d.id] = strip(d));
   (S.evolt || []).forEach(e => docs["evolt/" + e.id] = strip(e));
   if (S.mobility) docs["mobility/main"] = S.mobility;
+  if (S.weighs && Object.keys(S.weighs).length) docs["calendar/weighs"] = {days: S.weighs};
   Object.entries(S.videos).forEach(([k, v]) => docs["videos/" + k] = {...v, items: (v.items || []).filter(i => i.kind !== "asset")});
   if (S.chat.length) docs["chat/main"] = {turns: S.chat.slice(-40)};
   return {app: "registro-de-cargas", version: 1, exportedAt: new Date().toISOString(), docs};
 }
 async function restoreBackup(obj) {
   if (obj?.app !== "registro-de-cargas" || typeof obj.docs !== "object") throw new Error("formato");
-  const ok = /^(plan|profile|body|logs|daily|videos|chat|evolt|mobility)\/[A-Za-z0-9_\-.~:@+]+$/;
+  const ok = /^(plan|profile|body|logs|daily|videos|chat|evolt|mobility|calendar)\/[A-Za-z0-9_\-.~:@+]+$/;
   const entries = Object.entries(obj.docs).filter(([p, d]) => ok.test(p) && d && typeof d === "object" && !Array.isArray(d));
   for (let i = 0; i < entries.length; i += 5) await Promise.all(entries.slice(i, i + 5).map(([p, d]) => S.db.doc(p).set(d)));
   if (obj.docs["chat/main"]?.turns) S.chat = obj.docs["chat/main"].turns.slice();
@@ -2828,7 +2856,14 @@ document.addEventListener("click", async ev => {
     if (n > 62) { toast("Elige un rango de como máximo dos meses."); return; }
     await saveOverrides(upd); return;
   }
-  if (a === "calSaveDay") { await saveOverrides({[S.calSel]: ovValue($("#cal-ov").value)}); return; }
+  if (a === "calSaveDay") {
+    const iso = S.calSel, on = $("#cal-wg")?.checked, t = $("#cal-wt")?.value || weighDefaultTime(), auto = !!S.cal?.days?.[iso]?.weigh, mine = S.weighs?.[iso];
+    const ovNew = ovValue($("#cal-ov").value), ovChanged = JSON.stringify(ovNew || null) !== JSON.stringify(S.calOv?.[iso] || null);
+    const wgChanged = on ? (!mine && !auto) || (mine && mine.time !== t) || (!mine && auto && t !== weighDefaultTime()) : !!mine;
+    if (wgChanged) { S.calBusy = true; render(); try { await saveWeigh(iso, on, t); } catch { toast("No se pudo guardar el pesaje."); } S.calBusy = false; }
+    if (ovChanged || !wgChanged) await saveOverrides({[iso]: ovNew}); else { toast(on ? `Pesaje marcado a las ${t}` : "Pesaje quitado"); render(); }
+    return;
+  }
   if (a === "calSaveWeek") {
     const k = $("#cal-ov").value, mon = isoAdd(S.calSel, -((wdOf(S.calSel) + 6) % 7)), upd = {};
     for (let i = 0; i < 5; i++) upd[isoAdd(mon, i)] = ovValue(k);
@@ -2933,6 +2968,7 @@ if (!HOSTED && "serviceWorker" in navigator && location.protocol === "https:") a
   db.doc("calendar/main").onSnapshot(s => { S.cal = s.exists ? s.data() : null; S.calLoaded = true; autoPlace(); soon(); maybeAutoSync(); }, err);
   db.doc("calendar/gcal").onSnapshot(s => { S.gcalMap = s.exists ? (s.data().days || {}) : {}; soon(); }, err);
   db.doc("calendar/overrides").onSnapshot(s => { S.calOv = s.exists ? (s.data().days || {}) : {}; autoPlace(); soon(); }, err);
+  db.doc("calendar/weighs").onSnapshot(s => { S.weighs = s.exists ? (s.data().days || {}) : {}; soon(); dataTick(); }, err);
   db.collection("daily").orderBy("date", "desc").limit(400).onSnapshot(s => { S.daily = s.docs.map(d => ({id: d.id, ...d.data()})); soon(); dataTick(); }, err);
   db.collection("plan").onSnapshot(s => { S.plans = {}; s.docs.forEach(d => S.plans[d.id] = d.data()); buildExNames(); S.plansLoaded = true; soon(); dataTick(); maybeMigrateIds(); }, err);
   db.doc("profile/main").onSnapshot(s => { S.profile = s.exists ? s.data() : null; S.profileLoaded = true; soon(); if (S.tab === "evolt") evAuto(); }, err);
