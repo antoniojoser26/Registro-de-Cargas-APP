@@ -562,6 +562,30 @@ nav.tabs{padding:6px 2px}nav.tabs button{padding:6px 0;letter-spacing:-.02em;fon
 .vitem{background:rgba(238,241,248,.85);border-radius:12px}
 
 .weighrow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--plate-red) 9%,rgba(255,255,255,.6))}
+
+/* ===== Estilo neutro gris: la interfaz en grises; solo conservan color los datos (zonas de pulso, gráficas, subidas/bajadas) ===== */
+:root{--bg:#EDEDEF;--surface:#FFFFFF;--sunk:#E6E6E9;--ink:#1C1C1E;--muted:#6C6C72;--line:#DCDCE0;
+  --accent:#3A3A3F;--accent-2:#55555B;--accent-soft:#E4E4E8;--on-accent:#FFFFFF}
+body,body[data-tab]{--t:#4A4A50;--c1:#C9C9CE;--c2:#B6B6BC;--c3:#D6D6DA;--c4:#BFBFC5;background:#EDEDEF}
+.aurora i{opacity:.5}.aurora .b2{opacity:.4}.aurora .b3{opacity:.38}.aurora .b4{opacity:.35}
+.panel,.ex,.kpi,.extable,.foodcard,.mobcard,.prevcard,.weekcard,.evhero,.savebar,.vadd,.msg.a,.daypick button:not([aria-pressed="true"]),.empty,.vex,.vex:first-of-type{
+  box-shadow:0 8px 28px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.9)}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .panel,.ex,.kpi,.extable,.foodcard,.mobcard,.prevcard,.weekcard,.evhero,.savebar,.vadd,.msg.a,.daypick button:not([aria-pressed="true"]),.empty,.vex,.composer .box,nav.tabs{
+    -webkit-backdrop-filter:blur(18px) saturate(1);backdrop-filter:blur(18px) saturate(1)}}
+.vitem{background:rgba(236,236,239,.85)}
+nav.tabs{box-shadow:0 12px 34px rgba(0,0,0,.12),inset 0 1px 0 #fff}
+nav.tabs button[aria-current="page"]{color:var(--ink);background:rgba(60,60,67,.10)}
+nav.tabs button[aria-current="page"] svg{stroke:var(--ink)}
+.top .eyebrow{color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);box-shadow:none}
+.daypick button[aria-pressed="true"]{background:var(--accent);box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.seg button[aria-pressed="true"]{box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.msg.u{background:var(--accent);box-shadow:none}
+.fab{background:var(--accent);box-shadow:0 10px 26px rgba(0,0,0,.25)}
+.ex{border-top-color:var(--accent)}
+i.sh.M{background:var(--accent-soft);color:var(--ink)}
+.weighrow{background:rgba(255,255,255,.6)}
 </style>
 
 </head>
