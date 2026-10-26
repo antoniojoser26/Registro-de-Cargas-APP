@@ -456,7 +456,7 @@ nav.tabs button{font-size:10px;letter-spacing:-.02em}
 
 .foodcard.sticky{position:sticky;top:calc(env(safe-area-inset-top,0px) + 6px);z-index:4;padding:8px 10px}
 .foodcard.sticky.open{padding:14px;max-height:70vh;overflow:auto}
-.foodbar{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) 16px;gap:8px;align-items:end;width:100%}
+.foodbar{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:repeat(var(--fn,4),minmax(0,1fr)) 16px;gap:8px;align-items:end;width:100%}
 .foodbar:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:12px}
 .fmini{display:grid;gap:2px;min-width:0}.fmini b{font-family:var(--f-display);font-size:15px}.fmini small{font-size:10.5px;color:var(--muted);font-weight:600}
 .fmini>i{display:block;height:5px;border-radius:99px;background:var(--sunk);overflow:hidden}.fmini>i>i{display:block;height:100%;background:var(--kc);border-radius:99px}
@@ -1204,7 +1204,7 @@ function viewNut() {
   const last7 = days.filter(d => d.date > new Date(Date.now() - 8 * 864e5).toISOString().slice(0, 10));
   const avg = k => { const v = last7.map(d => d[k]).filter(x => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   const bar = (lbl, k, unit) => { const a = avg(k), t = T[k], hi = t[t.length - 1], pct = a == null ? 0 : Math.min(100, a / hi * 100);
-    const st = a == null ? "" : a > hi * 1.05 ? "over" : ""; return `<div class="kpi"><div class="eyebrow">${lbl}</div><div class="v">${a == null ? "—" : fmtN(a, 0)}<small>${unit}</small></div><div class="nutbar"><i class="${st}" style="width:${pct}%"></i></div><div class="small muted" style="margin-top:4px">Objetivo ${t.map(x => fmtN(x, 0)).join("–")} ${unit}</div></div>`; };
+    const st = a == null || k === "steps" ? "" : a > hi * 1.05 ? "over" : ""; return `<div class="kpi"><div class="eyebrow">${lbl}</div><div class="v">${a == null ? "—" : fmtN(a, 0)}<small>${unit}</small></div><div class="nutbar"><i class="${st}" style="width:${pct}%"></i></div><div class="small muted" style="margin-top:4px">Objetivo ${t.map(x => fmtN(x, 0)).join("–")} ${unit}</div></div>`; };
   const M = {kcal: ["Calorías", "kcal"], protein: ["Proteína", "g"], steps: ["Pasos", ""]};
   const pts = [...days].reverse().slice(-45).filter(d => d[S.nutMetric] != null).map(d => ({x: d.date, y: d[S.nutMetric]}));
   return `<section><div class="row between" style="margin-bottom:10px"><h2>Nutrición y actividad</h2><span class="small muted">${days[0] ? "Último día: " + fmtDate(days[0].date, {day: "numeric", month: "long"}) + " · " + esc(days[0].source || "") : "Sin datos de Samsung Health"}</span></div>
@@ -2194,7 +2194,8 @@ function md(src) {
   close(); return out;
 }
 /* ---------- objetivo diario y lo que llevas hoy ---------- */
-const MAC_KEYS = [["kcal", "Calorías", "kcal", /calor|kcal|energ/i, "var(--plate-green)"], ["protein", "Proteína", "g", /prote/i, "var(--plate-blue)"], ["carbs", "Hidratos", "g", /hidrat|carbo/i, "var(--plate-yellow)"], ["fat", "Grasas", "g", /gras/i, "var(--plate-red)"]];
+const MAC_KEYS = [["kcal", "Calorías", "kcal", /calor|kcal|energ/i, "var(--plate-green)"], ["protein", "Proteína", "g", /prote/i, "var(--plate-blue)"], ["carbs", "Hidratos", "g", /hidrat|carbo/i, "var(--plate-yellow)"], ["fat", "Grasas", "g", /gras/i, "var(--plate-red)"], ["steps", "Pasos", "pasos", /paso/i, "var(--plate-purple)"]];
+const MORE_OK = k => k === "steps"; // en pasos, pasarse del objetivo es bueno
 /* Lee los objetivos del Perfil («1.700 - 1.800 kcal», «140 g», «60-70 g»…) como números [mín, máx]. */
 function macroTargets() {
   const out = {};
@@ -2210,26 +2211,28 @@ function foodDayText() {
   const t = macroTargets(), d = todayFood(), now = new Date(), hh = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
   const w = typeof workDay === "function" ? workDay(todayISO()) : null;
   const tg = MAC_KEYS.filter(([k]) => t[k]).map(([k, l, u]) => `${l} ${t[k][0] === t[k][1] ? t[k][0] : t[k].join("-")} ${u}`).join(", ");
-  const eaten = d && MAC_KEYS.some(([k]) => d[k] != null) ? MAC_KEYS.map(([k, l, u]) => `${l} ${d[k] ?? "?"} ${u}`).join(", ") : null;
-  const left = eaten ? MAC_KEYS.filter(([k]) => t[k] && d[k] != null).map(([k, l, u]) => `${l} ${Math.round(t[k][0] - d[k])}${t[k][0] !== t[k][1] ? " a " + Math.round(t[k][1] - d[k]) : ""} ${u}`).join(", ") : null;
+  const FK = MAC_KEYS.filter(([k]) => k !== "steps");
+  const eaten = d && FK.some(([k]) => d[k] != null) ? FK.map(([k, l, u]) => `${l} ${d[k] ?? "?"} ${u}`).join(", ") : null;
+  const left = eaten ? FK.filter(([k]) => t[k] && d[k] != null).map(([k, l, u]) => `${l} ${Math.round(t[k][0] - d[k])}${t[k][0] !== t[k][1] ? " a " + Math.round(t[k][1] - d[k]) : ""} ${u}`).join(", ") : null;
+  const steps = t.steps ? `\n- Pasos: ${d?.steps != null ? d.steps + " de " + t.steps[0] + (d.steps < t.steps[0] ? " (le faltan " + (t.steps[0] - d.steps) + ")" : " (objetivo cumplido)") : "aún sin apuntar (objetivo " + t.steps[0] + ")"}.` : "";
   return `OBJETIVO DIARIO (de su Perfil, en números): ${tg || "sin definir"}.
 HOY ${todayISO()} a las ${hh}${w ? " · trabajo: " + workLabel(w) : ""}:
 - Lleva comido: ${eaten ? eaten + ` (apuntado: ${d.source || "a mano"})` : "aún no ha apuntado nada hoy"}.
-- Le queda: ${left || "—"}.`;
+- Le queda: ${left || "—"}.${steps}`;
 }
 function foodCard() {
   const t = macroTargets(), d = todayFood() || {};
   if (!Object.keys(t).length) return `<div class="foodcard"><div class="small">Para que el entrenador sepa cuánto te queda por comer, pon tus objetivos de calorías y macros en <b>Perfil → Objetivos de nutrición</b>.</div></div>`;
   const bars = MAC_KEYS.filter(([k]) => t[k]).map(([k, l, u, , c]) => {
-    const v = d[k], hi = t[k][1], pct = v != null ? Math.min(100, v / hi * 100) : 0, over = v != null && v > hi;
+    const v = d[k], hi = t[k][1], pct = v != null ? Math.min(100, v / hi * 100) : 0, over = v != null && v > hi && !MORE_OK(k);
     const left = v != null ? Math.round(t[k][0] - v) : null;
     return `<div class="fm" style="--kc:${c}"><div class="fl"><span>${l}</span><b class="num">${v != null ? fmtN(v, 0) : "–"}<small> ${u}</small></b></div>
       <div class="fb"><i style="width:${pct}%;${over ? "background:var(--plate-red)" : ""}"></i></div><div class="fr small ${over ? "bad" : ""}">Objetivo ${t[k][0] === t[k][1] ? fmtN(hi, 0) : fmtN(t[k][0], 0) + "–" + fmtN(hi, 0)}${v == null ? "" : " · "}${v == null ? "" : over ? `+${fmtN(v - hi, 0)} ${u} de más` : left > 0 ? `faltan ${fmtN(left, 0)} ${u}` : "objetivo cumplido"}</div></div>`;
   }).join("");
   const edit = S.foodEdit ? `<div class="grid2" style="margin-top:10px">${MAC_KEYS.map(([k, l, u]) => `<div class="field"><label for="fd-${k}">${l} (${u})</label><input class="input" id="fd-${k}" inputmode="decimal" value="${d[k] ?? ""}" placeholder="0"></div>`).join("")}</div>
     <div class="row" style="margin-top:8px"><button class="btn primary" data-act="foodSave">Guardar</button><button class="btn ghost" data-act="foodEdit">Cancelar</button></div>` : "";
-  const mini = MAC_KEYS.filter(([k]) => t[k]).map(([k, l, u, , c]) => { const v = d[k], hi = t[k][1]; return `<span class="fmini" style="--kc:${c}"><b class="num">${v != null ? fmtN(v, 0) : "–"}</b><small>/${fmtN(hi, 0)}${k === "kcal" ? "" : "g"}</small><i><i style="width:${v != null ? Math.min(100, v / hi * 100) : 0}%"></i></i><em>${k === "kcal" ? "kcal" : l.slice(0, 4).toLowerCase() + "."}</em></span>`; }).join("");
-  if (!S.foodOpen) return `<div class="foodcard sticky"><button class="foodbar" data-act="foodToggle" aria-expanded="false" aria-label="Tu comida de hoy: ver detalle">${mini}<span class="chev" aria-hidden="true">▾</span></button></div>`;
+  const mini = MAC_KEYS.filter(([k]) => t[k]).map(([k, l, u, , c]) => { const v = d[k], hi = t[k][1]; return `<span class="fmini" style="--kc:${c}"><b class="num">${v != null ? (k === "steps" && v >= 1000 ? fmtN(v / 1000, 1) + "k" : fmtN(v, 0)) : "–"}</b><small>/${k === "steps" ? fmtN(hi / 1000, hi % 1000 ? 1 : 0) + "k" : fmtN(hi, 0)}${k === "kcal" || k === "steps" ? "" : "g"}</small><i><i style="width:${v != null ? Math.min(100, v / hi * 100) : 0}%"></i></i><em>${k === "kcal" ? "kcal" : k === "steps" ? "pasos" : l.slice(0, 4).toLowerCase() + "."}</em></span>`; }).join("");
+  if (!S.foodOpen) return `<div class="foodcard sticky"><button class="foodbar" style="--fn:${MAC_KEYS.filter(([k]) => t[k]).length}" data-act="foodToggle" aria-expanded="false" aria-label="Tu comida de hoy: ver detalle">${mini}<span class="chev" aria-hidden="true">▾</span></button></div>`;
   return `<div class="foodcard sticky open"><div class="row between" style="margin-bottom:8px"><button class="eyebrow foodttl" data-act="foodToggle" aria-expanded="true">Tu comida de hoy ▴</button><div class="row" style="gap:6px">
       <button class="chip" data-act="foodEdit">${S.foodEdit ? "Cerrar" : d.kcal != null ? "Actualizar" : "Apuntar lo que llevo"}</button>
       ${!S.busy && coachReady() ? `<button class="chip" data-act="foodNext">¿Qué como ahora?</button>` : ""}</div></div>
